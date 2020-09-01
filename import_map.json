@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "std/": "https://deno.land/std@0.67.0/",
+    "pika/": "https://cdn.skypack.dev/"
+  }
+}
