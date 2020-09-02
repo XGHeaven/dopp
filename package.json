@@ -10,14 +10,17 @@
     "do": "deno run --unstable -A --importmap import_map.json",
     "play": "deno run --unstable -A --importmap import_map.json ./playground.ts",
     "dep": "deno cache --unstable --importmap import_map.json ./lib/deps.ts",
-    "bin": "deno run --unstable -A --importmap import_map.json ./lib/dopp.ts"
+    "dep:reload": "deno cache --unstable --importmap import_map.json --reload ./lib/deps.ts",
+    "bin": "deno run --unstable -A --importmap import_map.json ./lib/dopp.ts",
+    "schema": "node --experimental-modules ./scripts/generate-schema.mjs"
   },
   "author": "XGHeaven <xgheaven@gmail.com>",
   "license": "MIT",
   "devDependencies": {
     "ajv": "^6.12.4",
     "typescript": "^4.0.2",
-    "typescript-deno-plugin": "^1.31.0"
+    "typescript-deno-plugin": "^1.31.0",
+    "typescript-json-schema": "^0.43.0"
   },
   "dependencies": {}
 }

@@ -1,30 +1,42 @@
-import { flags } from './deps.ts'
-import { DoppBedRock } from "./dopp-bedrock.ts";
-import { AppHub } from "./app.ts";
+import { flags, yargs, path } from './deps.ts'
+import { DoppBedRock } from "./bedrock.ts";
 
-const args = flags.parse(Deno.args)
+let root: string = ''
 
-const root = Deno.env.get('DOPP_ROOT') ?? Deno.env.get('HOME')
+{
+  const DOPP_ROOT = Deno.env.get('DOPP_ROOT')
+  if (DOPP_ROOT) {
+    root = path.resolve(Deno.cwd(), DOPP_ROOT)
+  } else {
+    const HOME = Deno.env.get('HOME')
+    if (HOME) {
+      root = path.join(HOME, '.dopp')
+    }
+  }
+}
 
 if (!root) {
   console.log('Cannot get home of dopp')
   Deno.exit(1)
 }
 
-const bedrock = new DoppBedRock(root)
+const yargsInstance = yargs()
+  .scriptName('dopp')
+  .command('build-compose <appid>', 'Build app to docker compose', () => {}, async ({appid}: any) => {
+    const app = await bedrock.appHub.getApp(appid)
+    if (app) {
+      await app.writeComposeFile()
+    } else {
+      console.error(`Cannot found app of ${appid}`)
+    }
+  })
+  .command('info', 'Print infomation of dopp', () => {}, () => {
+    console.log(JSON.stringify(bedrock, null, 2))
+  })
+  .alias('h', 'help')
+  .demandCommand()
 
-switch (args._[0]) {
-  case 'new':
-    break
-  case 'start':
-    break
-  case 'stop':
-    break
-  case 'build': {
-    const id = args._[1] as string
-    const appHub = new AppHub(bedrock)
-    const app = await appHub.getApp(id)
-    await app?.writeComposeFile()
-    break
-  }
-}
+const bedrock = new DoppBedRock(root)
+await bedrock.prepare()
+
+yargsInstance.parse(Deno.args)

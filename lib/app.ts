@@ -1,14 +1,8 @@
-import { DoppBedRock } from "./dopp-bedrock.ts";
-import { fs, path, YAML, Ajv } from './deps.ts'
-
-export interface AppCommon {
-  name: string
-  image: string
-  env: (string | AppEnv)[]
-  volumes: (string | AppVolume)[]
-  networks: (string | AppNetwork)[]
-  labels: string[]
-}
+import { DoppBedRock } from "./bedrock.ts";
+import { Ajv, fs, path, YAML } from './deps.ts'
+import { AppConfig, AppEnv, AppEnvType, AppNetwork, AppVolume } from "./schema/app-config.ts";
+import { Schema } from './schema/app-config-schema.ts'
+import { TraefikService } from "./services/traefik.ts";
 
 export enum AppVolumeType {
   Volume = 'volume',
@@ -16,51 +10,9 @@ export enum AppVolumeType {
   Private = 'private'
 }
 
-export interface AppVolume {
-  source: string
-  target: string
-  type: string
-}
-
-// 配置定义
-export interface AppConfig extends Partial<AppCommon> {
-  extends?: string | string[]
-  services?: AppService[]
-}
-
-export enum AppEnvType {
-  File = 'file',
-  Pair = 'pair'
-}
-
-export interface AppEnvFile {
-  type: AppEnvType.File,
-  file: string
-}
-
-export interface AppEnvPair {
-  type: AppEnvType.Pair,
-  key: string,
-  value: string
-}
-
-export interface AppNetwork {
-  type: string
-  name: string
-}
-
-export type AppEnv = AppEnvFile | AppEnvPair
-
-export interface AppService {
-  use: string
-  [key: string]: any
-}
-
-const {$schema:_$schema, ...schema} = await fs.readJson('./app-schema.json') as any
-
 export class AppHub {
   #ajv = new Ajv()
-  #validate = this.#ajv.compile(schema)
+  #validate = this.#ajv.compile(Schema)
   constructor(private bedrock: DoppBedRock) {
   }
 
@@ -84,12 +36,11 @@ export class AppHub {
       throw new Error(`${err.dataPath} ${err.message}`)
     }
 
-    const app = new App(this.bedrock, appid, appConfig)
-    return app
+    return await App.create(this.bedrock, appid, appConfig)
   }
 
-  async hasApp(appid: string) {
-
+  async hasApp(appid: string): Promise<boolean> {
+    return await fs.exists(path.join(this.bedrock.appsDir, appid))
   }
 
   async newApp(appid: string, appConfig: AppConfig = {}): Promise<App> {
@@ -100,23 +51,13 @@ export class AppHub {
 
     await Deno.mkdir(appDir, {recursive: true})
     await Deno.writeFile(path.join(appDir, 'app.yml'), new TextEncoder().encode(YAML.stringify(appConfig as any)))
-    return new App(this.bedrock, appid, appConfig)
+    return await App.create(this.bedrock, appid, appConfig)
   }
 }
 
 export class App {
-  #bedrock: DoppBedRock
-  appDir: string
-  volumeDir: string
-  envFolder: string
-  constructor(bedrock: DoppBedRock, public readonly id: string, public readonly rawConfig: AppConfig) {
-    this.#bedrock = bedrock
-    this.name = rawConfig.name ?? 'unknown'
-    this.appDir = path.join(bedrock.appsDir, id)
-    this.volumeDir = path.join(this.appDir, 'volumes')
-    this.envFolder = path.join(this.appDir, 'env')
-
-    this.env = (rawConfig.env ?? []).map<AppEnv>(env => {
+  static async create(bedrock: DoppBedRock, id: string, rawConfig: AppConfig): Promise<App> {
+    const env = (rawConfig.env ?? []).map<AppEnv>(env => {
       if (typeof env === 'string') {
         if (env.startsWith('@')) {
           return {
@@ -135,14 +76,12 @@ export class App {
       }
     })
 
-    this.image = rawConfig.image ?? ''
-    this.labels = rawConfig.labels ?? []
-    this.networks = (rawConfig.networks ?? []).map<AppNetwork>(net => {
+    const networks = (rawConfig.networks ?? []).map<AppNetwork>(net => {
       if (typeof net === 'string') {
         if (net === '@') {
           return {
             type: 'bridge',
-            name: this.#bedrock.defaultNetwork
+            name: bedrock.defaultNetwork
           }
         } else {
           return {
@@ -155,7 +94,7 @@ export class App {
       }
     })
 
-    this.volumes = (rawConfig.volumes ?? []).map<AppVolume>(volume => {
+    const volumes = (rawConfig.volumes ?? []).map<AppVolume>(volume => {
       if (typeof volume === 'string') {
         const [source, target] = volume.split(':')
         if (!source || source.startsWith('@')) {
@@ -181,18 +120,45 @@ export class App {
         return volume
       }
     })
+
+    let app = new App(bedrock, id, rawConfig, env, networks, volumes)
+
+    for (const {use, ...options} of rawConfig.services??[]) {
+      const service = await bedrock.serviceHub.get<any>(use)
+      if (!service) {
+        continue
+      }
+      if (service.validate && !service.validate(options)) {
+        // TODO: print
+        continue
+      }
+      app = (await service.process(app, options)) ?? app
+    }
+
+    return app
   }
 
-  async prepare() {
-    // 创建相关的文件夹
+  readonly name: string;
+  readonly appDir: string
+  readonly volumeDir: string
+  readonly envFolder: string
+  readonly labels: string[]
+  readonly image: string
+  constructor(
+    private bedrock: DoppBedRock,
+    public readonly id: string,
+    public readonly rawConfig: AppConfig,
+    public readonly env: AppEnv[],
+    public readonly networks: AppNetwork[],
+    public readonly volumes: AppVolume[],
+  ) {
+    this.name = rawConfig.name ?? 'unknown'
+    this.appDir = path.join(bedrock.appsDir, id)
+    this.volumeDir = path.join(this.appDir, 'volumes')
+    this.envFolder = path.join(this.appDir, 'env')
+    this.labels = rawConfig.labels ?? []
+    this.image = rawConfig.image ?? ''
   }
-
-  env: AppEnv[];
-  image: string;
-  labels: string[];
-  name: string;
-  networks: AppNetwork[];
-  volumes: AppVolume[];
 
   toComposeJSON(): any {
     let envMap: any = {}
@@ -224,7 +190,7 @@ export class App {
             }
             return vol
           }),
-          networks: this.networks.length === 0 ? [this.#bedrock.defaultNetwork] : this.networks.map(net => net.name),
+          networks: this.networks.length === 0 ? [this.bedrock.defaultNetwork] : this.networks.map(net => net.name),
           environment: envMap,
           env_file: envFiles,
           labels: this.labels
@@ -240,6 +206,6 @@ export class App {
   }
 
   async writeComposeFile() {
-    await Deno.writeFile(path.join(this.#bedrock.appsDir, this.id, 'docker-compose.yml'), new TextEncoder().encode(YAML.stringify(this.toComposeJSON())))
+    await Deno.writeFile(path.join(this.bedrock.appsDir, this.id, 'docker-compose.yml'), new TextEncoder().encode(YAML.stringify(this.toComposeJSON())))
   }
 }
