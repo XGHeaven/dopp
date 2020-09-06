@@ -50,7 +50,7 @@ export class AppHub {
     }
 
     await Deno.mkdir(appDir, {recursive: true})
-    await Deno.writeFile(path.join(appDir, 'app.yml'), new TextEncoder().encode(YAML.stringify(appConfig as any)))
+    await Deno.writeFile(path.join(appDir, 'app.yml'), new TextEncoder().encode(YAML.stringify(appConfig as any, {skipInvalid: true})))
     return await App.create(this.bedrock, appid, appConfig)
   }
 }
@@ -144,6 +144,11 @@ export class App {
   readonly envFolder: string
   readonly labels: string[]
   readonly image: string
+
+  get ports() {
+    return this.rawConfig.ports ?? []
+  }
+
   constructor(
     private bedrock: DoppBedRock,
     public readonly id: string,
@@ -180,13 +185,10 @@ export class App {
       services: {
         default: {
           image: this.image,
+          ports: this.ports,
           volumes: this.volumes.map(vol => {
             if (vol.type === AppVolumeType.Private) {
-              return {
-                type: 'bind',
-                source: `./volumes/${vol.source}`,
-                target: vol.target
-              }
+              return `./volumes/${vol.source}:${vol.target}`
             }
             return vol
           }),
@@ -205,7 +207,12 @@ export class App {
     }
   }
 
-  async writeComposeFile() {
+  async build() {
+    for(const volume of this.volumes) {
+      if (volume.type === AppVolumeType.Private) {
+        await fs.ensureDir(path.join(this.volumeDir, volume.source))
+      }
+    }
     await Deno.writeFile(path.join(this.bedrock.appsDir, this.id, 'docker-compose.yml'), new TextEncoder().encode(YAML.stringify(this.toComposeJSON())))
   }
 }

@@ -73,6 +73,12 @@ export const Schema = {
       "items": {
         "$ref": "#/definitions/AppService"
       }
+    },
+    "ports": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "definitions": {

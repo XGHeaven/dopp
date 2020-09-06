@@ -1,5 +1,7 @@
-import { flags, yargs, path } from './deps.ts'
+import { yargs, path, Yargs } from './deps.ts'
 import { DoppBedRock } from "./bedrock.ts";
+
+import appCmd from './commands/app.ts'
 
 let root: string = ''
 
@@ -20,23 +22,18 @@ if (!root) {
   Deno.exit(1)
 }
 
+
+const bedrock = new DoppBedRock(root)
+
 const yargsInstance = yargs()
   .scriptName('dopp')
-  .command('build-compose <appid>', 'Build app to docker compose', () => {}, async ({appid}: any) => {
-    const app = await bedrock.appHub.getApp(appid)
-    if (app) {
-      await app.writeComposeFile()
-    } else {
-      console.error(`Cannot found app of ${appid}`)
-    }
-  })
+  .alias('h', 'help')
+  .demandCommand()
+  .command(appCmd(bedrock))
   .command('info', 'Print infomation of dopp', () => {}, () => {
     console.log(JSON.stringify(bedrock, null, 2))
   })
-  .alias('h', 'help')
-  .demandCommand()
 
-const bedrock = new DoppBedRock(root)
 await bedrock.prepare()
 
 yargsInstance.parse(Deno.args)

@@ -110,6 +110,7 @@ dist
 
 ### Test
 .test
+.dopp
 
 ### Playground
 playground.ts

@@ -14,6 +14,7 @@ export interface AppConfig {
   labels?: string[]
   extends?: string | string[]
   services?: AppService[]
+  ports?: string[]
 }
 
 export enum AppEnvType {
