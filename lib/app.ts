@@ -8,6 +8,10 @@ import {
   AppVolume,
 } from "./schema/app-config.ts";
 import { Schema } from "./schema/app-config-schema.ts";
+import { parseEnv, stringifyEnv } from "./utils.ts";
+
+const DIR_NAME_VOLUME = "volumes";
+const DIR_NAME_ENV = "envs";
 
 export enum AppVolumeType {
   Volume = "volume",
@@ -77,8 +81,13 @@ export class App {
       if (typeof env === "string") {
         if (env.startsWith("@")) {
           return {
+            type: AppEnvType.Private,
+            name: env.slice(1),
+          };
+        } else if (env.startsWith(".") || env.startsWith("/")) {
+          return {
             type: AppEnvType.File,
-            file: env.slice(1),
+            file: env,
           };
         } else {
           const [key, value] = env.split("=");
@@ -141,6 +150,8 @@ export class App {
 
     let app = new App(bedrock, id, rawConfig, env, networks, volumes);
 
+    await app.loadEnvMap();
+
     for (const { use, ...options } of rawConfig.services ?? []) {
       const service = await bedrock.serviceHub.get<any>(use);
       if (!service) {
@@ -150,7 +161,7 @@ export class App {
         // TODO: print
         continue;
       }
-      app = (await service.process(app, options)) ?? app;
+      await service.process(app, options);
     }
 
     return app;
@@ -159,9 +170,11 @@ export class App {
   readonly name: string;
   readonly appDir: string;
   readonly volumeDir: string;
-  readonly envFolder: string;
+  readonly envDir: string;
   readonly labels: string[];
   readonly image: string;
+
+  private envMap: Map<string, Record<string, string>> = new Map();
 
   get ports() {
     return this.rawConfig.ports ?? [];
@@ -177,8 +190,8 @@ export class App {
   ) {
     this.name = rawConfig.name ?? "unknown";
     this.appDir = path.join(bedrock.appsDir, id);
-    this.volumeDir = path.join(this.appDir, "volumes");
-    this.envFolder = path.join(this.appDir, "env");
+    this.volumeDir = path.join(this.appDir, DIR_NAME_VOLUME);
+    this.envDir = path.join(this.appDir, DIR_NAME_ENV);
     this.labels = rawConfig.labels ?? [];
     this.image = rawConfig.image ?? "";
   }
@@ -191,6 +204,9 @@ export class App {
       switch (env.type) {
         case AppEnvType.File:
           envFiles.push(env.file);
+          break;
+        case AppEnvType.Private:
+          envFiles.push(`./${DIR_NAME_ENV}/${env.name}`);
           break;
         case AppEnvType.Pair:
           envMap[env.key] = env.value;
@@ -238,12 +254,51 @@ export class App {
     return path.join(this.volumeDir, name);
   }
 
+  createEnv(name: string, pairs: Record<string, string>) {
+    this.envMap.set(name, pairs);
+  }
+
+  getEnv(name: string) {
+    return this.envMap.get(name);
+  }
+
+  deleteEnv(name: string) {
+    this.envMap.delete(name);
+  }
+
+  async loadEnvMap() {
+    for await (const envfile of Deno.readDir(this.envDir)) {
+      const name = path.basename(envfile.name, ".ext");
+      const env = new TextDecoder().decode(
+        await Deno.readFile(path.join(this.envDir, envfile.name)),
+      );
+      this.envMap.set(name, parseEnv(env));
+    }
+  }
+
   async build() {
     for (const volume of this.volumes) {
       if (volume.type === AppVolumeType.Private) {
         await fs.ensureDir(path.join(this.volumeDir, volume.source));
       }
     }
+
+    await fs.ensureDir(this.envDir);
+    for await (const envfile of Deno.readDir(this.envDir)) {
+      const name = path.basename(envfile.name, ".env");
+      const filepath = path.join(this.envDir, envfile.name);
+      if (!this.envMap.has(name)) {
+        await Deno.remove(filepath);
+      }
+    }
+
+    for (const [name, env] of this.envMap.entries()) {
+      await Deno.writeFile(
+        path.join(this.envDir, `${name}.env`),
+        new TextEncoder().encode(stringifyEnv(env)),
+      );
+    }
+
     await Deno.writeFile(
       path.join(this.bedrock.appsDir, this.id, "docker-compose.yml"),
       new TextEncoder().encode(YAML.stringify(this.toComposeJSON())),

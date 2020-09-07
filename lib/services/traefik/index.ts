@@ -14,13 +14,15 @@ interface TraefikServiceOptions {
   healthcheck?: {};
 }
 
-export class TraefikService implements Service<TraefikServiceOptions> {
+interface TraefikServiceConfig {
+}
+
+export class TraefikService
+  extends Service<TraefikServiceOptions, TraefikServiceConfig> {
   static command = "traefik";
   static description = "Manage traefik service";
 
-  constructor(public bedrock: DoppBedRock) {}
-
-  process(app: App, options: TraefikServiceOptions): App | undefined {
+  process(app: App, options: TraefikServiceOptions): void {
     const labels: string[] = ["traefik.enable=true"];
     const id = app.id;
 
@@ -54,7 +56,6 @@ export class TraefikService implements Service<TraefikServiceOptions> {
     }
 
     app.labels.push(...labels);
-    return app;
   }
 
   command(yargs: Yargs.YargsType): Yargs.YargsType {

@@ -20,6 +20,7 @@ export interface AppConfig {
 export enum AppEnvType {
   File = "file",
   Pair = "pair",
+  Private = "private",
 }
 
 export interface AppEnvFile {
@@ -33,12 +34,17 @@ export interface AppEnvPair {
   value: string;
 }
 
+export interface AppEnvPrivate {
+  type: AppEnvType.Private;
+  name: string;
+}
+
 export interface AppNetwork {
   type: string;
   name: string;
 }
 
-export type AppEnv = AppEnvFile | AppEnvPair;
+export type AppEnv = AppEnvFile | AppEnvPair | AppEnvPrivate;
 
 export interface AppService {
   use: string;

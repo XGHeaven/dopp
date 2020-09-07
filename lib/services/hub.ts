@@ -2,9 +2,11 @@ import { TraefikService } from "./traefik/index.ts";
 import { Service } from "./service.ts";
 import { DoppBedRock } from "../bedrock.ts";
 import { Yargs, yargs } from "../deps.ts";
+import { MysqlService } from "./mysql/index.ts";
 
 export const BUILTIN_SERVICES: Record<string, any> = {
   traefik: TraefikService,
+  mysql: MysqlService,
 };
 
 async function loadCtr(url: string) {
