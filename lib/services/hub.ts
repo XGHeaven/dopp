@@ -1,6 +1,7 @@
-import { TraefikService } from "./traefik.ts";
+import { TraefikService } from "./traefik/index.ts";
 import { Service } from "./service.ts";
 import { DoppBedRock } from "../bedrock.ts";
+import { Yargs, yargs } from "../deps.ts";
 
 export const BUILTIN_SERVICES: Record<string, any> = {
   traefik: TraefikService
@@ -20,15 +21,20 @@ async function loadCtr(url: string) {
 }
 
 function createServiceLoader(ServiceCtr: any, options?: any): ServiceLoader {
-  return async (bedrock: DoppBedRock) => {
+  const loader = async (bedrock: DoppBedRock) => {
     if (ServiceCtr.create) {
       return Promise.resolve(ServiceCtr.create(bedrock, options))
     }
     return Promise.resolve(new ServiceCtr(bedrock, options))
   }
+  loader.Service = ServiceCtr
+  return loader
 }
 
-type ServiceLoader = (bedrock: DoppBedRock) => Promise<Service<any>>
+interface ServiceLoader {
+  (bedrock: DoppBedRock): Promise<Service<any>>
+  Service: any
+}
 
 export class ServiceHub {
   static async create(bedrock: DoppBedRock) {
@@ -39,7 +45,7 @@ export class ServiceHub {
       const url = typeof config === 'string' ? config : config[0]
       const options = typeof config === 'string' ? undefined : config[1]
       const ctr = await loadCtr(url)
-      const name = BUILTIN_SERVICES[url] ? url : ctr.serviceName ?? ctr.name ?? 'unknown-service'
+      const name = BUILTIN_SERVICES[url] ? url : ctr.service ?? ctr.name ?? 'unknown-service'
       return [name, ctr, options]
     }))
 
@@ -63,5 +69,24 @@ export class ServiceHub {
       this.loadedService[name] = await this.services[name](this.bedrock)
     }
     return this.loadedService[name]
+  }
+
+  async loadAll(): Promise<Service<any>[]> {
+    return await Promise.all(Object.keys(this.services).map(name => this.get(name)))
+  }
+
+  async getAllCommands(): Promise<any[]> {
+    return (await Promise.all(Object.entries(this.services).map(async ([name, {Service}]) => {
+      if (Service.command) {
+        const service = await this.get(name)
+        if (service.command) {
+          return {
+            command: Service.command,
+            description: Service.description,
+            builder: (yargs: Yargs.YargsType) => service.command!(yargs)
+          }
+        }
+      }
+    }))).filter(Boolean)
   }
 }

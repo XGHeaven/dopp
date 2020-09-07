@@ -25,7 +25,7 @@ if (!root) {
 
 const bedrock = new DoppBedRock(root)
 
-const yargsInstance = yargs()
+let yargsInstance = yargs()
   .scriptName('dopp')
   .alias('h', 'help')
   .demandCommand()
@@ -35,5 +35,11 @@ const yargsInstance = yargs()
   })
 
 await bedrock.prepare()
+
+const serviceCommands = await bedrock.serviceHub.getAllCommands()
+
+for (const command of serviceCommands) {
+  yargsInstance = yargsInstance.command(command)
+}
 
 yargsInstance.parse(Deno.args)

@@ -12,7 +12,8 @@
     "dep": "deno cache --unstable --importmap import_map.json ./lib/deps.ts",
     "dep:reload": "deno cache --unstable --importmap import_map.json --reload ./lib/deps.ts",
     "bin": "DOPP_ROOT=./.dopp deno run --unstable -A --importmap import_map.json ./lib/dopp.ts",
-    "schema": "node --experimental-modules ./scripts/generate-schema.mjs"
+    "schema": "node --experimental-modules ./scripts/generate-schema.mjs",
+    "template": "deno run --unstable -A ./scripts/generate-template.ts"
   },
   "author": "XGHeaven <xgheaven@gmail.com>",
   "license": "MIT",

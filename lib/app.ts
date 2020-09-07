@@ -2,7 +2,6 @@ import { DoppBedRock } from "./bedrock.ts";
 import { Ajv, fs, path, YAML } from './deps.ts'
 import { AppConfig, AppEnv, AppEnvType, AppNetwork, AppVolume } from "./schema/app-config.ts";
 import { Schema } from './schema/app-config-schema.ts'
-import { TraefikService } from "./services/traefik.ts";
 
 export enum AppVolumeType {
   Volume = 'volume',
@@ -185,10 +184,15 @@ export class App {
       services: {
         default: {
           image: this.image,
+          hostname: this.id,
+          container_name: this.id,
           ports: this.ports,
           volumes: this.volumes.map(vol => {
             if (vol.type === AppVolumeType.Private) {
               return `./volumes/${vol.source}:${vol.target}`
+            }
+            if (vol.type === AppVolumeType.Bind) {
+              return `${vol.source}:${vol.target}`
             }
             return vol
           }),
@@ -205,6 +209,10 @@ export class App {
         return nets
       }, {})
     }
+  }
+
+  getVolumeDir(name: string = 'default') {
+    return path.join(this.volumeDir, name)
   }
 
   async build() {

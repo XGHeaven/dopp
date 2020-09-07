@@ -1,0 +1,8 @@
+[providers]
+  [providers.file]
+    watch = true
+    directory = "/etc/traefik/conf.d"
+  [providers.docker]
+
+[api]
+  dashboard = true
