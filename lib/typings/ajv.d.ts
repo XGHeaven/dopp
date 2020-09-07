@@ -1,10 +1,10 @@
 declare var ajv: {
   (options?: ajv.Options): ajv.Ajv;
-  new(options?: ajv.Options): ajv.Ajv;
+  new (options?: ajv.Options): ajv.Ajv;
   ValidationError: typeof AjvErrors.ValidationError;
   MissingRefError: typeof AjvErrors.MissingRefError;
   $dataMetaSchema: object;
-}
+};
 
 declare namespace AjvErrors {
   class ValidationError extends Error {
@@ -39,7 +39,10 @@ declare namespace ajv {
     * @param  {Any} data to be validated
     * @return {Boolean} validation result. Errors from the last validation will be available in `ajv.errors` (and also in compiled schema: `schema.errors`).
     */
-    validate(schemaKeyRef: object | string | boolean, data: any): boolean | PromiseLike<any>;
+    validate(
+      schemaKeyRef: object | string | boolean,
+      data: any,
+    ): boolean | PromiseLike<any>;
     /**
     * Create validating function for passed schema.
     * @param  {object|Boolean} schema schema object
@@ -55,7 +58,11 @@ declare namespace ajv {
     * @param {Function} callback optional node-style callback, it is always called with 2 parameters: error (or null) and validating function.
     * @return {PromiseLike<ValidateFunction>} validating function
     */
-    compileAsync(schema: object | boolean, meta?: Boolean, callback?: (err: Error, validate: ValidateFunction) => any): PromiseLike<ValidateFunction>;
+    compileAsync(
+      schema: object | boolean,
+      meta?: Boolean,
+      callback?: (err: Error, validate: ValidateFunction) => any,
+    ): PromiseLike<ValidateFunction>;
     /**
     * Adds schema to the instance.
     * @param {object|Array} schema schema or array of schemas. If array is passed, `key` and other parameters will be ignored.
@@ -128,14 +135,20 @@ declare namespace ajv {
     * @param {boolean} throwError true to throw exception if definition is invalid
     * @return {boolean} validation result
     */
-    validateKeyword(definition: KeywordDefinition, throwError: boolean): boolean;
+    validateKeyword(
+      definition: KeywordDefinition,
+      throwError: boolean,
+    ): boolean;
     /**
     * Convert array of error message objects to string
     * @param  {Array<object>} errors optional array of validation errors, if not passed errors from the instance are used.
     * @param  {object} options optional options with properties `separator` and `dataVar`.
     * @return {string} human readable string with all errors descriptions
     */
-    errorsText(errors?: Array<ErrorObject> | null, options?: ErrorsTextOptions): string;
+    errorsText(
+      errors?: Array<ErrorObject> | null,
+      options?: ErrorsTextOptions,
+    ): string;
     errors?: Array<ErrorObject> | null;
   }
 
@@ -151,7 +164,7 @@ declare namespace ajv {
       dataPath?: string,
       parentData?: object | Array<any>,
       parentDataProperty?: string | number,
-      rootData?: object | Array<any>
+      rootData?: object | Array<any>,
     ): boolean | PromiseLike<any>;
     schema?: object | boolean;
     errors?: null | Array<ErrorObject>;
@@ -172,29 +185,32 @@ declare namespace ajv {
     format?: false | string;
     formats?: object;
     keywords?: object;
-    unknownFormats?: true | string[] | 'ignore';
+    unknownFormats?: true | string[] | "ignore";
     schemas?: Array<object> | object;
-    schemaId?: '$id' | 'id' | 'auto';
-    missingRefs?: true | 'ignore' | 'fail';
-    extendRefs?: true | 'ignore' | 'fail';
-    loadSchema?: (uri: string, cb?: (err: Error, schema: object) => void) => PromiseLike<object | boolean>;
-    removeAdditional?: boolean | 'all' | 'failing';
-    useDefaults?: boolean | 'empty' | 'shared';
-    coerceTypes?: boolean | 'array';
-    strictDefaults?: boolean | 'log';
-    strictKeywords?: boolean | 'log';
+    schemaId?: "$id" | "id" | "auto";
+    missingRefs?: true | "ignore" | "fail";
+    extendRefs?: true | "ignore" | "fail";
+    loadSchema?: (
+      uri: string,
+      cb?: (err: Error, schema: object) => void,
+    ) => PromiseLike<object | boolean>;
+    removeAdditional?: boolean | "all" | "failing";
+    useDefaults?: boolean | "empty" | "shared";
+    coerceTypes?: boolean | "array";
+    strictDefaults?: boolean | "log";
+    strictKeywords?: boolean | "log";
     strictNumbers?: boolean;
     async?: boolean | string;
     transpile?: string | ((code: string) => string);
     meta?: boolean | object;
-    validateSchema?: boolean | 'log';
+    validateSchema?: boolean | "log";
     addUsedSchema?: boolean;
     inlineRefs?: boolean | number;
     passContext?: boolean;
     loopRequired?: number;
     ownProperties?: boolean;
     multipleOfPrecision?: boolean | number;
-    errorDataPath?: string,
+    errorDataPath?: string;
     messages?: boolean;
     sourceCode?: boolean;
     processCode?: (code: string, schema: object) => string;
@@ -204,18 +220,21 @@ declare namespace ajv {
     serialize?: ((schema: object | boolean) => any) | false;
   }
 
-  type FormatValidator = string | RegExp | ((data: string) => boolean | PromiseLike<any>);
+  type FormatValidator =
+    | string
+    | RegExp
+    | ((data: string) => boolean | PromiseLike<any>);
   type NumberFormatValidator = ((data: number) => boolean | PromiseLike<any>);
 
   interface NumberFormatDefinition {
-    type: "number",
+    type: "number";
     validate: NumberFormatValidator;
     compare?: (data1: number, data2: number) => number;
     async?: boolean;
   }
 
   interface StringFormatDefinition {
-    type?: "string",
+    type?: "string";
     validate: FormatValidator;
     compare?: (data1: string, data2: string) => number;
     async?: boolean;
@@ -237,9 +256,22 @@ declare namespace ajv {
     valid?: boolean;
     // one and only one of the following properties should be present
     validate?: SchemaValidateFunction | ValidateFunction;
-    compile?: (schema: any, parentSchema: object, it: CompilationContext) => ValidateFunction;
-    macro?: (schema: any, parentSchema: object, it: CompilationContext) => object | boolean;
-    inline?: (it: CompilationContext, keyword: string, schema: any, parentSchema: object) => string;
+    compile?: (
+      schema: any,
+      parentSchema: object,
+      it: CompilationContext,
+    ) => ValidateFunction;
+    macro?: (
+      schema: any,
+      parentSchema: object,
+      it: CompilationContext,
+    ) => object | boolean;
+    inline?: (
+      it: CompilationContext,
+      keyword: string,
+      schema: any,
+      parentSchema: object,
+    ) => string;
   }
 
   interface CompilationContext {
@@ -284,7 +316,7 @@ declare namespace ajv {
       dataPath?: string,
       parentData?: object | Array<any>,
       parentDataProperty?: string | number,
-      rootData?: object | Array<any>
+      rootData?: object | Array<any>,
     ): boolean | PromiseLike<any>;
     errors?: Array<ErrorObject>;
   }
@@ -309,12 +341,25 @@ declare namespace ajv {
     data?: any;
   }
 
-  type ErrorParameters = RefParams | LimitParams | AdditionalPropertiesParams |
-    DependenciesParams | FormatParams | ComparisonParams |
-    MultipleOfParams | PatternParams | RequiredParams |
-    TypeParams | UniqueItemsParams | CustomParams |
-    PatternRequiredParams | PropertyNamesParams |
-    IfParams | SwitchParams | NoParams | EnumParams;
+  type ErrorParameters =
+    | RefParams
+    | LimitParams
+    | AdditionalPropertiesParams
+    | DependenciesParams
+    | FormatParams
+    | ComparisonParams
+    | MultipleOfParams
+    | PatternParams
+    | RequiredParams
+    | TypeParams
+    | UniqueItemsParams
+    | CustomParams
+    | PatternRequiredParams
+    | PropertyNamesParams
+    | IfParams
+    | SwitchParams
+    | NoParams
+    | EnumParams;
 
   interface RefParams {
     ref: string;
@@ -336,7 +381,7 @@ declare namespace ajv {
   }
 
   interface FormatParams {
-    format: string
+    format: string;
   }
 
   interface ComparisonParams {
@@ -386,7 +431,7 @@ declare namespace ajv {
     caseIndex: number;
   }
 
-  interface NoParams { }
+  interface NoParams {}
 
   interface EnumParams {
     allowedValues: Array<any>;

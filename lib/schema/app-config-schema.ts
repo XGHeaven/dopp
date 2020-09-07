@@ -2,84 +2,84 @@ export const Schema = {
   "type": "object",
   "properties": {
     "name": {
-      "type": "string"
+      "type": "string",
     },
     "image": {
-      "type": "string"
+      "type": "string",
     },
     "env": {
       "type": "array",
       "items": {
         "anyOf": [
           {
-            "$ref": "#/definitions/AppEnvFile"
+            "$ref": "#/definitions/AppEnvFile",
           },
           {
-            "$ref": "#/definitions/AppEnvPair"
+            "$ref": "#/definitions/AppEnvPair",
           },
           {
-            "type": "string"
-          }
-        ]
-      }
+            "type": "string",
+          },
+        ],
+      },
     },
     "volumes": {
       "type": "array",
       "items": {
         "anyOf": [
           {
-            "$ref": "#/definitions/AppVolume"
+            "$ref": "#/definitions/AppVolume",
           },
           {
-            "type": "string"
-          }
-        ]
-      }
+            "type": "string",
+          },
+        ],
+      },
     },
     "networks": {
       "type": "array",
       "items": {
         "anyOf": [
           {
-            "$ref": "#/definitions/AppNetwork"
+            "$ref": "#/definitions/AppNetwork",
           },
           {
-            "type": "string"
-          }
-        ]
-      }
+            "type": "string",
+          },
+        ],
+      },
     },
     "labels": {
       "type": "array",
       "items": {
-        "type": "string"
-      }
+        "type": "string",
+      },
     },
     "extends": {
       "anyOf": [
         {
           "type": "array",
           "items": {
-            "type": "string"
-          }
+            "type": "string",
+          },
         },
         {
-          "type": "string"
-        }
-      ]
+          "type": "string",
+        },
+      ],
     },
     "services": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/AppService"
-      }
+        "$ref": "#/definitions/AppService",
+      },
     },
     "ports": {
       "type": "array",
       "items": {
-        "type": "string"
-      }
-    }
+        "type": "string",
+      },
+    },
   },
   "definitions": {
     "AppEnvFile": {
@@ -88,13 +88,13 @@ export const Schema = {
         "type": {
           "type": "string",
           "enum": [
-            "file"
-          ]
+            "file",
+          ],
         },
         "file": {
-          "type": "string"
-        }
-      }
+          "type": "string",
+        },
+      },
     },
     "AppEnvPair": {
       "type": "object",
@@ -102,51 +102,51 @@ export const Schema = {
         "type": {
           "type": "string",
           "enum": [
-            "pair"
-          ]
+            "pair",
+          ],
         },
         "key": {
-          "type": "string"
+          "type": "string",
         },
         "value": {
-          "type": "string"
-        }
-      }
+          "type": "string",
+        },
+      },
     },
     "AppVolume": {
       "type": "object",
       "properties": {
         "source": {
-          "type": "string"
+          "type": "string",
         },
         "target": {
-          "type": "string"
+          "type": "string",
         },
         "type": {
-          "type": "string"
-        }
-      }
+          "type": "string",
+        },
+      },
     },
     "AppNetwork": {
       "type": "object",
       "properties": {
         "type": {
-          "type": "string"
+          "type": "string",
         },
         "name": {
-          "type": "string"
-        }
-      }
+          "type": "string",
+        },
+      },
     },
     "AppService": {
       "type": "object",
       "additionalProperties": {},
       "properties": {
         "use": {
-          "type": "string"
-        }
-      }
-    }
+          "type": "string",
+        },
+      },
+    },
   },
-  "$schema": "http://json-schema.org/draft-07/schema#"
-}
+  "$schema": "http://json-schema.org/draft-07/schema#",
+};

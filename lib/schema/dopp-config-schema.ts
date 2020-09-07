@@ -2,10 +2,10 @@ export const Schema = {
   "type": "object",
   "properties": {
     "defaultNetwork": {
-      "type": "string"
+      "type": "string",
     },
     "dockerEndpoint": {
-      "type": "string"
+      "type": "string",
     },
     "services": {
       "type": "array",
@@ -15,26 +15,26 @@ export const Schema = {
             "type": "array",
             "items": [
               {
-                "type": "string"
+                "type": "string",
               },
-              {}
+              {},
             ],
             "minItems": 1,
             "additionalItems": {
               "anyOf": [
                 {
-                  "type": "string"
+                  "type": "string",
                 },
-                {}
-              ]
-            }
+                {},
+              ],
+            },
           },
           {
-            "type": "string"
-          }
-        ]
-      }
-    }
+            "type": "string",
+          },
+        ],
+      },
+    },
   },
-  "$schema": "http://json-schema.org/draft-07/schema#"
-}
+  "$schema": "http://json-schema.org/draft-07/schema#",
+};

@@ -28,7 +28,7 @@ export default function (bedrock: DoppBedRock) {
               name,
               image,
             });
-          }
+          },
         )
         .command(
           "build <appid>",
@@ -41,16 +41,21 @@ export default function (bedrock: DoppBedRock) {
             } else {
               console.error(`Cannot found app of ${appid}`);
             }
-          }
+          },
         )
-        .command('inspect <appid>', 'Inspect app', () => {}, async ({appid}: any) => {
-          const app = await bedrock.appHub.getApp(appid)
-          if (!app) {
-            console.log('Cannot found app')
-          } else {
-            console.log(app, null, 2)
-          }
-        }),
+        .command(
+          "inspect <appid>",
+          "Inspect app",
+          () => {},
+          async ({ appid }: any) => {
+            const app = await bedrock.appHub.getApp(appid);
+            if (!app) {
+              console.log("Cannot found app");
+            } else {
+              console.log(app, null, 2);
+            }
+          },
+        ),
     handler: () => {},
   };
 }

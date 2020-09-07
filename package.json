@@ -13,7 +13,8 @@
     "dep:reload": "deno cache --unstable --importmap import_map.json --reload ./lib/deps.ts",
     "bin": "DOPP_ROOT=./.dopp deno run --unstable -A --importmap import_map.json ./lib/dopp.ts",
     "schema": "node --experimental-modules ./scripts/generate-schema.mjs",
-    "template": "deno run --unstable -A ./scripts/generate-template.ts"
+    "template": "deno run --unstable -A ./scripts/generate-template.ts",
+    "fmt": "deno fmt lib"
   },
   "author": "XGHeaven <xgheaven@gmail.com>",
   "license": "MIT",

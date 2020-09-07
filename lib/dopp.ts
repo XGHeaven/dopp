@@ -1,45 +1,44 @@
-import { yargs, path, Yargs } from './deps.ts'
+import { yargs, path, Yargs } from "./deps.ts";
 import { DoppBedRock } from "./bedrock.ts";
 
-import appCmd from './commands/app.ts'
+import appCmd from "./commands/app.ts";
 
-let root: string = ''
+let root: string = "";
 
 {
-  const DOPP_ROOT = Deno.env.get('DOPP_ROOT')
+  const DOPP_ROOT = Deno.env.get("DOPP_ROOT");
   if (DOPP_ROOT) {
-    root = path.resolve(Deno.cwd(), DOPP_ROOT)
+    root = path.resolve(Deno.cwd(), DOPP_ROOT);
   } else {
-    const HOME = Deno.env.get('HOME')
+    const HOME = Deno.env.get("HOME");
     if (HOME) {
-      root = path.join(HOME, '.dopp')
+      root = path.join(HOME, ".dopp");
     }
   }
 }
 
 if (!root) {
-  console.log('Cannot get home of dopp')
-  Deno.exit(1)
+  console.log("Cannot get home of dopp");
+  Deno.exit(1);
 }
 
-
-const bedrock = new DoppBedRock(root)
+const bedrock = new DoppBedRock(root);
 
 let yargsInstance = yargs()
-  .scriptName('dopp')
-  .alias('h', 'help')
+  .scriptName("dopp")
+  .alias("h", "help")
   .demandCommand()
   .command(appCmd(bedrock))
-  .command('info', 'Print infomation of dopp', () => {}, () => {
-    console.log(JSON.stringify(bedrock, null, 2))
-  })
+  .command("info", "Print infomation of dopp", () => {}, () => {
+    console.log(JSON.stringify(bedrock, null, 2));
+  });
 
-await bedrock.prepare()
+await bedrock.prepare();
 
-const serviceCommands = await bedrock.serviceHub.getAllCommands()
+const serviceCommands = await bedrock.serviceHub.getAllCommands();
 
 for (const command of serviceCommands) {
-  yargsInstance = yargsInstance.command(command)
+  yargsInstance = yargsInstance.command(command);
 }
 
-yargsInstance.parse(Deno.args)
+yargsInstance.parse(Deno.args);
