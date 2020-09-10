@@ -1,7 +1,6 @@
 import { Service } from "../service.ts";
 import { App } from "../../app.ts";
 import { Yargs, path } from "../../deps.ts";
-import { DoppBedRock } from "../../bedrock.ts";
 import { Templates } from "./template.ts";
 
 interface TraefikServiceOptions {

@@ -1,8 +1,8 @@
 import { TraefikService } from "./traefik/index.ts";
-import { Service } from "./service.ts";
+import { Service, ServiceContext } from "./service.ts";
 import { DoppBedRock } from "../bedrock.ts";
 import { Yargs, yargs } from "../deps.ts";
-import { MysqlService } from "./mysql/index.ts";
+import * as MysqlService from "./mysql/index.ts";
 
 export const BUILTIN_SERVICES: Record<string, any> = {
   traefik: TraefikService,
@@ -22,12 +22,16 @@ async function loadCtr(url: string) {
   return mod;
 }
 
-function createServiceLoader(ServiceCtr: any, options?: any): ServiceLoader {
+function createServiceLoader(
+  ServiceCtr: any,
+  context: ServiceContext<any>,
+): ServiceLoader {
   const loader = async (bedrock: DoppBedRock) => {
     if (ServiceCtr.create) {
-      return Promise.resolve(ServiceCtr.create(bedrock, options));
+      // 类创建函数
+      return Promise.resolve(ServiceCtr.create(bedrock, context));
     }
-    return Promise.resolve(new ServiceCtr(bedrock, options));
+    return Promise.resolve(new ServiceCtr(bedrock, context));
   };
   loader.Service = ServiceCtr;
   return loader;
@@ -44,19 +48,18 @@ export class ServiceHub {
     const serviceLoaders: Record<string, ServiceLoader> = {};
 
     const results = await Promise.all(
-      services.map(async (config): Promise<[string, any, any?]> => {
-        const url = typeof config === "string" ? config : config[0];
-        const options = typeof config === "string" ? undefined : config[1];
+      services.map(async (url): Promise<[string, any]> => {
         const ctr = await loadCtr(url);
         const name = BUILTIN_SERVICES[url]
           ? url
           : ctr.service ?? ctr.name ?? "unknown-service";
-        return [name, ctr, options];
+        return [name, ctr];
       }),
     );
 
-    for (const [name, ctr, config] of results) {
-      serviceLoaders[name] = createServiceLoader(ctr, config);
+    for (const [name, ctr] of results) {
+      const ctx = new ServiceContext(bedrock, name);
+      serviceLoaders[name] = createServiceLoader(ctr, ctx);
     }
 
     return new ServiceHub(bedrock, serviceLoaders);

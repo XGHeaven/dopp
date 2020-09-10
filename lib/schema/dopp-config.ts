@@ -1,7 +1,7 @@
 export interface DoppConfig {
   defaultNetwork?: string;
   dockerEndpoint?: string;
-  services?: (string | [string, any?])[];
+  services?: string[];
 }
 
 export type Schema = DoppConfig;

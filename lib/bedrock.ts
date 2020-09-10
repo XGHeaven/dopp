@@ -9,10 +9,12 @@ export class DoppBedRock implements Required<DoppConfig> {
   #serviceHub!: ServiceHub;
   #appHub!: AppHub;
 
+  readonly appsDir: string;
+  readonly serviceDir: string;
+
   readonly defaultNetwork: string = "dopp";
   readonly dockerEndpoint: string = "unix:///var/run/docker.sock";
-  readonly services: (string | [string, any?])[] = [];
-  readonly appsDir: string;
+  readonly services: string[] = [];
   readonly configPath: string;
 
   get serviceHub() {
@@ -25,7 +27,9 @@ export class DoppBedRock implements Required<DoppConfig> {
 
   constructor(public readonly root: string) {
     this.appsDir = path.join(this.root, "apps");
+    this.serviceDir = path.join(this.root, "services");
     this.configPath = path.join(this.root, "config.json");
+
     const config = fs.existsSync(this.configPath)
       ? fs.readJsonSync(this.configPath)
       : {};

@@ -41,7 +41,7 @@ export class AppHub {
     ) as any;
 
     const valid = this.#validate(appConfig);
-    console.log(appConfig);
+
     if (!valid) {
       const [err] = this.#validate.errors!;
       throw new Error(`${err.dataPath} ${err.message}`);
@@ -54,9 +54,13 @@ export class AppHub {
     return await fs.exists(path.join(this.bedrock.appsDir, appid));
   }
 
-  async newApp(appid: string, appConfig: AppConfig = {}): Promise<App> {
+  async newApp(
+    appid: string,
+    appConfig: AppConfig = {},
+    force: boolean = false,
+  ): Promise<App> {
     const appDir = path.join(this.bedrock.appsDir, appid);
-    if (await fs.exists(appDir)) {
+    if (await fs.exists(appDir) && !force) {
       return (await this.getApp(appid))!;
     }
 
@@ -72,35 +76,37 @@ export class AppHub {
 }
 
 export class App {
+  static parseEnv(env: string | AppEnv): AppEnv {
+    if (typeof env === "string") {
+      if (env.startsWith("@")) {
+        return {
+          type: AppEnvType.Private,
+          name: env.slice(1),
+        };
+      } else if (env.startsWith(".") || env.startsWith("/")) {
+        return {
+          type: AppEnvType.File,
+          file: env,
+        };
+      } else {
+        const [key, value] = env.split("=");
+        return {
+          type: AppEnvType.Pair,
+          key,
+          value,
+        };
+      }
+    } else {
+      return env;
+    }
+  }
+
   static async create(
     bedrock: DoppBedRock,
     id: string,
     rawConfig: AppConfig,
   ): Promise<App> {
-    const env = (rawConfig.env ?? []).map<AppEnv>((env) => {
-      if (typeof env === "string") {
-        if (env.startsWith("@")) {
-          return {
-            type: AppEnvType.Private,
-            name: env.slice(1),
-          };
-        } else if (env.startsWith(".") || env.startsWith("/")) {
-          return {
-            type: AppEnvType.File,
-            file: env,
-          };
-        } else {
-          const [key, value] = env.split("=");
-          return {
-            type: AppEnvType.Pair,
-            key,
-            value,
-          };
-        }
-      } else {
-        return env;
-      }
-    });
+    const env = (rawConfig.env ?? []).map<AppEnv>(App.parseEnv);
 
     const networks = (rawConfig.networks ?? []).map<AppNetwork>((net) => {
       if (typeof net === "string") {
@@ -206,7 +212,7 @@ export class App {
           envFiles.push(env.file);
           break;
         case AppEnvType.Private:
-          envFiles.push(`./${DIR_NAME_ENV}/${env.name}`);
+          envFiles.push(`./${DIR_NAME_ENV}/${env.name}.env`);
           break;
         case AppEnvType.Pair:
           envMap[env.key] = env.value;
@@ -258,6 +264,10 @@ export class App {
     this.envMap.set(name, pairs);
   }
 
+  appendEnv(env: string | AppEnv) {
+    this.env.push(App.parseEnv(env));
+  }
+
   getEnv(name: string) {
     return this.envMap.get(name);
   }
@@ -267,8 +277,9 @@ export class App {
   }
 
   async loadEnvMap() {
+    await fs.ensureDir(this.envDir);
     for await (const envfile of Deno.readDir(this.envDir)) {
-      const name = path.basename(envfile.name, ".ext");
+      const name = path.basename(envfile.name, ".env");
       const env = new TextDecoder().decode(
         await Deno.readFile(path.join(this.envDir, envfile.name)),
       );

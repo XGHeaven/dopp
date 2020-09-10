@@ -1,7 +1,8 @@
-import { Service } from "../service.ts";
+import { ServiceContext } from "../service.ts";
 import { App } from "../../app.ts";
 import { Yargs } from "../../deps.ts";
-import { AppEnvType } from "../../schema/app-config.ts";
+import { DoppBedRock } from "../../bedrock.ts";
+import { runComposeCommand } from "../../utils.ts";
 
 export interface MysqlServiceOptions {
   db: string;
@@ -10,101 +11,241 @@ export interface MysqlServiceOptions {
 }
 
 export interface MysqlServiceConfig {
-  type?: "mysql" | "mariadb";
-  export?: number | boolean;
+  type: "mysql" | "mariadb";
+  export: number | boolean;
+  rootPassword: string;
+  dbs: Record<string, {
+    password: string;
+  }>;
 }
 
-export class MysqlService
-  extends Service<MysqlServiceOptions, MysqlServiceConfig> {
-  static command = "mysql";
-  static description = "Manage mysql db service";
+function newPassword() {
+  return new Array(36).fill(0).map(() =>
+    Math.floor((Math.random() * 36)).toString(36)
+  ).join("");
+}
 
-  async process(app: App, options: MysqlServiceOptions): Promise<void> {
-    const mysqlApp = await this.bedrock.appHub.getApp("mysql");
+export const command = "mysql";
+export const description = "Manage mysql db service";
 
-    if (!mysqlApp) {
-      return;
+export function create(
+  bedrock: DoppBedRock,
+  ctx: ServiceContext<MysqlServiceConfig>,
+) {
+  async function newOrGetRootPassword() {
+    const password = await ctx.getConfig("rootPassword");
+    if (password) {
+      return password;
     }
 
-    const env = mysqlApp.getEnv(`service-${options.db}`);
-
-    if (!options.prefix || !options.remap) {
-      app.env.push(
-        {
-          type: AppEnvType.File,
-          file: `../mysql/envs/service-${options.db}.env`,
-        },
-      );
-    }
-
-    if (options.remap) {
-      // TODO: 将配置重新映射，并且不再插入原先的配置
-    }
-
-    if (options.prefix) {
-      // TODO: 将 MYSQL 的前缀修改掉
-    }
+    const npwd = newPassword();
+    await ctx.setConfig("rootPassword", npwd);
+    return npwd;
   }
 
-  command(yargs: Yargs.YargsType): Yargs.YargsType {
-    return yargs.demandCommand().command(
-      "init",
-      "Init mysql app",
-      () => {},
-      () => this.init(),
-    ).command(
-      "create <db>",
-      "Create new database",
-      () => {},
-      (args: any) => this.create(args),
-    );
-  }
+  async function init(update = false) {
+    const type = await ctx.getConfig("type", "mariadb");
+    const exports = await ctx.getConfig("export", true);
 
-  private async init() {
-    if (await this.bedrock.appHub.hasApp("mysql")) {
+    if (!update && await bedrock.appHub.hasApp("mysql")) {
       console.log("Mysql app has been inited");
       return;
     }
 
-    const app = await this.bedrock.appHub.newApp("mysql", {
-      image: this.config?.type ?? "mariadb",
-      ports: typeof this.config?.export === "number"
-        ? [`${this.config?.export}:3306`]
-        : this.config?.export
+    const app = await bedrock.appHub.newApp("mysql", {
+      image: type ?? "mariadb",
+      ports: typeof exports === "number"
+        ? [`${exports}:3306`]
+        : exports
         ? ["3306:3306"]
         : [],
       volumes: ["@:/var/lib/mysql"],
       env: ["@root-password"],
-    });
+    }, update);
 
     app.createEnv("root-password", {
-      MYSQL_ROOT_PASSWORD: new Array(36).fill(0).map(() =>
-        Math.floor((Math.random() * 36)).toString(36)
-      ).join(""),
+      MYSQL_ROOT_PASSWORD: await newOrGetRootPassword(),
     });
 
     await app.build();
   }
 
-  private async create({ db }: any) {
-    const app = await this.bedrock.appHub.getApp("mysql");
+  async function create(db: string) {
+    // TODO: make sure mysql service is running
+
+    const app = await bedrock.appHub.getApp("mysql");
+    const dbs = await ctx.getConfig("dbs", {});
+    const rootPassword = await ctx.getConfig("rootPassword", "");
 
     if (!app) {
-      console.log("Please init mysql");
-      return;
+      throw new Error("Please init mysql service first");
     }
 
-    // TODO: make sure mysql service is running
-    // TODO: connect to service for create account & database
+    if (dbs[db]) {
+      throw new Error(`${db} database has been created`);
+    }
 
-    app.createEnv(`service-${db}`, {
-      MYSQL_HOST: "mysql",
-      MYSQL_PORT: "3306",
-      MYSQL_USER: db,
-      MYSQL_PASSWORD: "",
-      MYSQL_DATABASE: db,
-    });
+    const password = newPassword();
 
-    await app.build();
+    const SQL = `
+CREATE USER '${db}' IDENTIFIED BY '${password}';
+CREATE DATABASE ${db};
+GRANT ALL ON ${db}.* TO '${db}';
+    `.trim();
+
+    await runComposeCommand(
+      app,
+      ["exec", "default", "mysql", "-p" + rootPassword, "-e", SQL],
+      true,
+    );
+
+    dbs[db] = {
+      password,
+    };
+
+    await ctx.setConfig("dbs", dbs);
   }
+
+  async function remove(db: string) {
+    const app = await bedrock.appHub.getApp("mysql");
+    const dbs = await ctx.getConfig("dbs", {});
+    const rootPassword = await ctx.getConfig("rootPassword", "");
+    const copys = { ...dbs };
+    delete copys[db];
+
+    const SQL = `
+DROP DATABASE IF EXISTS ${db};
+DROP USER IF EXISTS '${db}';
+    `;
+
+    await runComposeCommand(
+      app!,
+      ["exec", "default", "mysql", "-p" + rootPassword, "-e", SQL],
+    );
+
+    await ctx.setConfig("dbs", copys);
+  }
+
+  async function repl(db: string) {
+    const app = await bedrock.appHub.getApp("mysql");
+    let ret: Deno.ProcessStatus;
+    if (db === "root") {
+      const rootPassword = await ctx.getConfig("rootPassword", "");
+      ret = await Deno.run({
+        cmd: [
+          "docker-compose",
+          "exec",
+          "default",
+          "mysql",
+          "-u",
+          "root",
+          "-p" + rootPassword,
+        ],
+        cwd: app?.appDir,
+        stdin: "inherit",
+        stdout: "inherit",
+        stderr: "inherit",
+      }).status();
+    } else {
+      const dbs = await ctx.getConfig("dbs", {});
+      ret = await Deno.run({
+        cmd: [
+          "docker-compose",
+          "exec",
+          "default",
+          "mysql",
+          db,
+          "-u",
+          db,
+          "-p" + dbs[db].password,
+        ],
+        cwd: app?.appDir,
+        stdin: "inherit",
+        stdout: "inherit",
+        stderr: "inherit",
+      }).status();
+    }
+
+    if (!ret.success) {
+      Deno.exit(ret.code);
+    }
+  }
+
+  async function list() {
+    const dbs = await ctx.getConfig("dbs", {});
+
+    Object.keys(dbs).forEach((db) => console.log(db));
+  }
+
+  return {
+    async process(app: App, options: MysqlServiceOptions) {
+      const dbs = await ctx.getConfig("dbs", {});
+      const db = options.db;
+
+      if (!db || !dbs[db]) {
+        throw new Error("Must be choose db");
+      }
+
+      const dbConfig = dbs[db];
+      const envName = `service-mysql-${db}`;
+      let env: Record<string, string>;
+
+      if (options.remap) {
+        env = {};
+      } else {
+        const prefix = options.prefix ?? "MYSQL";
+        env = {
+          [`${prefix}_HOST`]: "mysql",
+          [`${prefix}_PORT`]: "3306",
+          [`${prefix}_USER`]: db,
+          [`${prefix}_PASSWORD`]: dbConfig.password,
+          [`${prefix}_DATABASE`]: db,
+        };
+      }
+
+      app.createEnv(envName, env);
+
+      app.appendEnv(`@${envName}`);
+    },
+
+    command(yargs: Yargs.YargsType): Yargs.YargsType {
+      return yargs.demandCommand().command(
+        "init",
+        "Init mysql app",
+        (_yargs: Yargs.YargsType) =>
+          _yargs.option("update", { type: "boolean", alias: ["u"] }),
+        ({ update }: any) => init(!!update),
+      ).command(
+        "create <db>",
+        "Create new database",
+        () => {},
+        ({ db }: any) => create(db),
+      )
+        .command(
+          "remove <db>",
+          "Remove database",
+          (_yargs: Yargs.YargsType) =>
+            _yargs.option("yes", { alias: "y", type: "boolean" }),
+          ({ db, yes }: any) => {
+            console.log(yes);
+            if (!yes) {
+              console.log(
+                "Delete is a dangerous action, please pass --yes or -y",
+              );
+              return;
+            }
+            remove(db);
+          },
+        )
+        .command(
+          "repl <db>",
+          "Run a mysql REPL",
+          () => {},
+          ({ db }: any) => repl(db),
+        )
+        .command("list", "List all added db", () => {}, () => {
+          list();
+        });
+    },
+  };
 }

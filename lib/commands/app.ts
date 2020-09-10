@@ -1,5 +1,6 @@
 import { Yargs } from "../deps.ts";
 import { DoppBedRock } from "../bedrock.ts";
+import { runComposeCommand } from "../utils.ts";
 
 export default function (bedrock: DoppBedRock) {
   return {
@@ -54,6 +55,46 @@ export default function (bedrock: DoppBedRock) {
             } else {
               console.log(app, null, 2);
             }
+          },
+        )
+        .command(
+          "start <appid>",
+          "Start app",
+          () => {},
+          async ({ appid }: any) => {
+            const app = await bedrock.appHub.getApp(appid);
+            if (!app)return;
+            await runComposeCommand(app, ["up", "-d"]);
+          },
+        )
+        .command(
+          "stop <appid>",
+          "Stop app",
+          () => {},
+          async ({ appid }: any) => {
+            const app = await bedrock.appHub.getApp(appid);
+            if (!app) return;
+            await runComposeCommand(app, ["down"]);
+          },
+        )
+        .command(
+          "rm <appid>",
+          "Remove app",
+          () => {},
+          async ({ appid }: any) => {
+            const app = await bedrock.appHub.getApp(appid);
+            if (!app) return;
+            await runComposeCommand(app, ["rm"]);
+          },
+        )
+        .command(
+          "status <appid>",
+          "Get status app",
+          () => {},
+          async ({ appid }: any) => {
+            const app = await bedrock.appHub.getApp(appid);
+            if (!app) return;
+            await runComposeCommand(app, ["ps"]);
           },
         ),
     handler: () => {},
