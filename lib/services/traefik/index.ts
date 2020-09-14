@@ -24,6 +24,7 @@ export class TraefikService
   process(app: App, options: TraefikServiceOptions): void {
     const labels: string[] = ["traefik.enable=true"];
     const id = app.id;
+    const esc = id.replaceAll('.', '_')
 
     // TODO: 根据配置自动获取网络信息
     labels.push(`traefik.docker.network=dopp`);
@@ -31,26 +32,26 @@ export class TraefikService
     if (options.hostname) {
       if (options.type === "tcp") {
         labels.push(
-          `traefik.tcp.routers."${id}".rule=HostSNI(\`${options.hostname}\`)`,
+          `traefik.tcp.routers.${esc}.rule=HostSNI(\`${options.hostname}\`)`,
         );
       } else if (options.type !== "udp") {
         labels.push(
-          `traefik.http.routers."${id}".rule=Host(\`${options.hostname}\`)`,
+          `traefik.http.routers.${esc}.rule=Host(\`${options.hostname}\`)`,
         );
       }
       // TODO: udp
     }
     if (options.port) {
       labels.push(
-        `traefik.http.services."${id}".loadbalancer.server.port=${options.port}`,
+        `traefik.http.services.${esc}.loadbalancer.server.port=${options.port}`,
       );
     }
 
     if (options.tls) {
       if (options.type === "tcp") {
-        labels.push(`traefik.tcp.routers."${id}".tls=true`);
+        labels.push(`traefik.tcp.routers.${esc}.tls=true`);
       } else if (options.type !== "udp") {
-        labels.push(`traefik.http.routers."${id}".tls=true`);
+        labels.push(`traefik.http.routers.${esc}.tls=true`);
       }
     }
 
