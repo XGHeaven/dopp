@@ -1,4 +1,5 @@
 import { App } from "./app.ts";
+import { DoppBedRock } from "./bedrock.ts";
 
 export function parseEnv(env: string) {
   return env.trim().split("\n").map((line) =>
@@ -29,4 +30,16 @@ export async function runComposeCommand(
   if (!ret.success) {
     Deno.exit(ret.code);
   }
+}
+
+export async function runDockerCommand(bedrock: DoppBedRock, cmds: string[], quiet: boolean = false) {
+  const ret = await Deno.run({
+    cmd: ['docker', ...cmds],
+    cwd: bedrock.root,
+    stdin: quiet ? "null" : "inherit",
+    stderr: quiet ? "null" : "inherit",
+    stdout: quiet ? "null" : "inherit",
+  }).status()
+
+  return ret
 }

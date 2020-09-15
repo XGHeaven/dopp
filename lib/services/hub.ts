@@ -1,12 +1,15 @@
-import { TraefikService } from "./traefik/index.ts";
 import { Service, ServiceContext } from "./service.ts";
 import { DoppBedRock } from "../bedrock.ts";
 import { Yargs, yargs } from "../deps.ts";
+
+import * as TraefikService from "./traefik/index.ts";
 import * as MysqlService from "./mysql/index.ts";
+import * as MongodbService from './mongo/index.ts'
 
 export const BUILTIN_SERVICES: Record<string, any> = {
   traefik: TraefikService,
   mysql: MysqlService,
+  mongodb: MongodbService
 };
 
 async function loadCtr(url: string) {
@@ -29,9 +32,9 @@ function createServiceLoader(
   const loader = async (bedrock: DoppBedRock) => {
     if (ServiceCtr.create) {
       // 类创建函数
-      return Promise.resolve(ServiceCtr.create(bedrock, context));
+      return Promise.resolve(ServiceCtr.create(context));
     }
-    return Promise.resolve(new ServiceCtr(bedrock, context));
+    return Promise.resolve(new ServiceCtr(context));
   };
   loader.Service = ServiceCtr;
   return loader;

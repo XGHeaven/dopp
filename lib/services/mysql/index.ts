@@ -1,7 +1,6 @@
 import { ServiceContext } from "../service.ts";
 import { App } from "../../app.ts";
 import { Yargs } from "../../deps.ts";
-import { DoppBedRock } from "../../bedrock.ts";
 import { runComposeCommand } from "../../utils.ts";
 
 export interface MysqlServiceOptions {
@@ -29,9 +28,10 @@ export const command = "mysql";
 export const description = "Manage mysql db service";
 
 export function create(
-  bedrock: DoppBedRock,
   ctx: ServiceContext<MysqlServiceConfig>,
 ) {
+  const { bedrock } = ctx
+
   async function newOrGetRootPassword() {
     const password = await ctx.getConfig("rootPassword");
     if (password) {
@@ -209,7 +209,7 @@ DROP USER IF EXISTS '${db}';
     },
 
     command(yargs: Yargs.YargsType): Yargs.YargsType {
-      return yargs.demandCommand().command(
+      return ctx.registeProcessCommand(yargs.demandCommand().command(
         "init",
         "Init mysql app",
         (_yargs: Yargs.YargsType) =>
@@ -245,7 +245,7 @@ DROP USER IF EXISTS '${db}';
         )
         .command("list", "List all added db", () => {}, () => {
           list();
-        });
+        }), 'mysql');
     },
   };
 }

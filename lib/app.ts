@@ -114,11 +114,13 @@ export class App {
           return {
             type: "bridge",
             name: bedrock.defaultNetwork,
+            aliases: [id],
           };
         } else {
           return {
             type: "bridge",
             name: net,
+            aliases: []
           };
         }
       } else {
@@ -226,7 +228,6 @@ export class App {
         default: {
           image: this.image,
           hostname: this.id,
-          container_name: this.id,
           ports: this.ports,
           volumes: this.volumes.map((vol) => {
             if (vol.type === AppVolumeType.Private) {
@@ -238,8 +239,13 @@ export class App {
             return vol;
           }),
           networks: this.networks.length === 0
-            ? [this.bedrock.defaultNetwork]
-            : this.networks.map((net) => net.name),
+            ? {[this.bedrock.defaultNetwork]: {aliases: [this.id]}}
+            : this.networks.reduce<Record<string, any>>((nets, net) => {
+              nets[net.name] = {
+                aliases: net.aliases
+              }
+              return nets
+            }, {}),
           environment: envMap,
           env_file: envFiles,
           labels: this.labels,

@@ -42,6 +42,7 @@ export interface AppEnvPrivate {
 export interface AppNetwork {
   type: string;
   name: string;
+  aliases: string[]
 }
 
 export type AppEnv = AppEnvFile | AppEnvPair | AppEnvPrivate;

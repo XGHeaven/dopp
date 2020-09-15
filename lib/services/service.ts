@@ -1,12 +1,12 @@
 import { App } from "../app.ts";
 import { Yargs, path, fs } from "../deps.ts";
 import { DoppBedRock } from "../bedrock.ts";
+import { createAppSSSCommand } from "../commands/app.ts";
 
-export abstract class Service<O, C = any> {
-  constructor(public bedrock: DoppBedRock, public ctx: ServiceContext<C>) {
-  }
+export type ServiceCreator<C, O> = (context: ServiceContext<C>) => Service<O>
 
-  abstract process(app: App, options: O): void | Promise<void>;
+export interface Service<O> {
+  process(app: App, options: O): void | Promise<void>;
 
   validate?(options: O): boolean;
 
@@ -19,7 +19,7 @@ export class ServiceContext<C extends Record<any, any>> {
   #config!: C;
   #configPath: string;
 
-  constructor(private bedrock: DoppBedRock, private name: string) {
+  constructor(public readonly bedrock: DoppBedRock, private name: string) {
     this.storeDir = path.join(this.bedrock.serviceDir, name);
     this.#configPath = path.join(this.storeDir, "config.json");
     fs.ensureDirSync(this.storeDir);
@@ -42,5 +42,9 @@ export class ServiceContext<C extends Record<any, any>> {
   async setConfig<K extends keyof C>(key: K, value: C[K]): Promise<void> {
     this.#config[key] = value;
     await fs.writeJson(this.#configPath, this.#config);
+  }
+
+  registeProcessCommand(yargs: Yargs.YargsType, appid: string) {
+    return createAppSSSCommand(this.bedrock, yargs, appid)
   }
 }
