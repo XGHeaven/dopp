@@ -86,11 +86,14 @@ export function createAppSSSCommand(bedrock: DoppBedRock, yargs: Yargs.YargsType
   return yargs.command(
     getCommand('start'),
     "Start app",
-    () => {},
+    (_yargs: Yargs.YargsType) => _yargs.option('build', {type: 'boolean', default: false, alias: ['b'], description: 'Build app'}),
     async (args: any) => {
       const appid = getAppid(args)
       const app = await bedrock.appHub.getApp(appid);
       if (!app)return;
+      if (args.build) {
+        await app.build()
+      }
       await runComposeCommand(app, ["up", "-d"]);
     },
   )
