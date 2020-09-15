@@ -83,10 +83,14 @@ export function createAppSSSCommand(bedrock: DoppBedRock, yargs: Yargs.YargsType
     return args.appid
   }
 
+  function addAppidPositional(yargs: Yargs.YargsType) {
+    return appid ? yargs: yargs.positional('appid', {type: 'string', description: 'App id you want to do'})
+  }
+
   return yargs.command(
     getCommand('start'),
     "Start app",
-    (_yargs: Yargs.YargsType) => _yargs.option('build', {type: 'boolean', default: false, alias: ['b'], description: 'Build app'}),
+    (_yargs: Yargs.YargsType) => addAppidPositional(_yargs).option('build', {type: 'boolean', default: false, alias: ['b'], description: 'Build app'}),
     async (args: any) => {
       const appid = getAppid(args)
       const app = await bedrock.appHub.getApp(appid);
@@ -100,7 +104,7 @@ export function createAppSSSCommand(bedrock: DoppBedRock, yargs: Yargs.YargsType
   .command(
     getCommand("stop"),
     "Stop app",
-    () => {},
+    addAppidPositional,
     async (args: any) => {
       const appid = getAppid(args)
       const app = await bedrock.appHub.getApp(appid);
@@ -111,7 +115,7 @@ export function createAppSSSCommand(bedrock: DoppBedRock, yargs: Yargs.YargsType
   .command(
     getCommand("status"),
     "Get status app",
-    () => {},
+    addAppidPositional,
     async (args: any) => {
       const appid = getAppid(args)
       const app = await bedrock.appHub.getApp(appid);
