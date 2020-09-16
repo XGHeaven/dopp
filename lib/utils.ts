@@ -43,3 +43,9 @@ export async function runDockerCommand(bedrock: DoppBedRock, cmds: string[], qui
 
   return ret
 }
+
+export function generatePassword(length = 32) {
+  return new Array(length).fill(0).map(() =>
+    Math.floor((Math.random() * 36)).toString(36)
+  ).join("");
+}

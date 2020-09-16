@@ -253,8 +253,8 @@ export class App {
           environment: envMap,
           env_file: envFiles,
           labels: this.labels,
-          command: this.command,
-          entrypoint: this.entrypoint
+          ...(this.command ? {command: this.command} : {}),
+          ...(this.entrypoint ? {entrypoint: this.entrypoint} : {})
         },
       },
       networks: this.networks.length === 0

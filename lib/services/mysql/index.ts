@@ -1,7 +1,7 @@
 import { ServiceContext } from "../service.ts";
 import { App } from "../../app.ts";
 import { Yargs } from "../../deps.ts";
-import { runComposeCommand } from "../../utils.ts";
+import { runComposeCommand, generatePassword } from "../../utils.ts";
 
 export interface MysqlServiceOptions {
   db: string;
@@ -18,12 +18,6 @@ export interface MysqlServiceConfig {
   }>;
 }
 
-function newPassword() {
-  return new Array(36).fill(0).map(() =>
-    Math.floor((Math.random() * 36)).toString(36)
-  ).join("");
-}
-
 export const command = "mysql";
 export const description = "Manage mysql db service";
 
@@ -38,7 +32,7 @@ export function create(
       return password;
     }
 
-    const npwd = newPassword();
+    const npwd = generatePassword();
     await ctx.setConfig("rootPassword", npwd);
     return npwd;
   }
@@ -85,7 +79,7 @@ export function create(
       throw new Error(`${db} database has been created`);
     }
 
-    const password = newPassword();
+    const password = generatePassword();
 
     const SQL = `
 CREATE USER '${db}' IDENTIFIED BY '${password}';
