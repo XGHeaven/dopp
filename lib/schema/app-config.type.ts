@@ -15,8 +15,8 @@ export interface AppConfig {
   extends?: string | string[];
   services?: AppService[];
   ports?: string[];
-  command?: string | string[]
-  entrypoint?: string | string[]
+  command?: string | string[];
+  entrypoint?: string | string[];
 }
 
 export enum AppEnvType {
@@ -44,7 +44,7 @@ export interface AppEnvPrivate {
 export interface AppNetwork {
   type: string;
   name: string;
-  aliases: string[]
+  aliases: string[];
 }
 
 export type AppEnv = AppEnvFile | AppEnvPair | AppEnvPrivate;

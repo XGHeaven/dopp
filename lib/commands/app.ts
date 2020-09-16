@@ -71,56 +71,74 @@ export default function (bedrock: DoppBedRock) {
   };
 }
 
-export function createAppSSSCommand(bedrock: DoppBedRock, yargs: Yargs.YargsType, appid?: string) {
+export function createAppSSSCommand(
+  bedrock: DoppBedRock,
+  yargs: Yargs.YargsType,
+  appid?: string,
+) {
   function getCommand(command: string) {
-    return command + (appid ? '' : ' <appid>')
+    return command + (appid ? "" : " <appid>");
   }
 
   function getAppid(args: any) {
     if (appid) {
-      return appid
+      return appid;
     }
-    return args.appid
+    return args.appid;
   }
 
   function addAppidPositional(yargs: Yargs.YargsType) {
-    return appid ? yargs: yargs.positional('appid', {type: 'string', description: 'App id you want to do'})
+    return appid
+      ? yargs
+      : yargs.positional(
+        "appid",
+        { type: "string", description: "App id you want to do" },
+      );
   }
 
   return yargs.command(
-    getCommand('start'),
+    getCommand("start"),
     "Start app",
-    (_yargs: Yargs.YargsType) => addAppidPositional(_yargs).option('build', {type: 'boolean', default: false, alias: ['b'], description: 'Build app'}),
+    (_yargs: Yargs.YargsType) =>
+      addAppidPositional(_yargs).option(
+        "build",
+        {
+          type: "boolean",
+          default: false,
+          alias: ["b"],
+          description: "Build app",
+        },
+      ),
     async (args: any) => {
-      const appid = getAppid(args)
+      const appid = getAppid(args);
       const app = await bedrock.appHub.getApp(appid);
-      if (!app)return;
+      if (!app) return;
       if (args.build) {
-        await app.build()
+        await app.build();
       }
       await runComposeCommand(app, ["up", "-d"]);
     },
   )
-  .command(
-    getCommand("stop"),
-    "Stop app",
-    addAppidPositional,
-    async (args: any) => {
-      const appid = getAppid(args)
-      const app = await bedrock.appHub.getApp(appid);
-      if (!app) return;
-      await runComposeCommand(app, ["down"]);
-    },
-  )
-  .command(
-    getCommand("status"),
-    "Get status app",
-    addAppidPositional,
-    async (args: any) => {
-      const appid = getAppid(args)
-      const app = await bedrock.appHub.getApp(appid);
-      if (!app) return;
-      await runComposeCommand(app, ["ps"]);
-    },
-  )
+    .command(
+      getCommand("stop"),
+      "Stop app",
+      addAppidPositional,
+      async (args: any) => {
+        const appid = getAppid(args);
+        const app = await bedrock.appHub.getApp(appid);
+        if (!app) return;
+        await runComposeCommand(app, ["down"]);
+      },
+    )
+    .command(
+      getCommand("status"),
+      "Get status app",
+      addAppidPositional,
+      async (args: any) => {
+        const appid = getAppid(args);
+        const app = await bedrock.appHub.getApp(appid);
+        if (!app) return;
+        await runComposeCommand(app, ["ps"]);
+      },
+    );
 }

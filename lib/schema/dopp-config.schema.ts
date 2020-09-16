@@ -2,17 +2,17 @@ export const Schema = {
   "type": "object",
   "properties": {
     "defaultNetwork": {
-      "type": "string"
+      "type": "string",
     },
     "dockerEndpoint": {
-      "type": "string"
+      "type": "string",
     },
     "services": {
       "type": "array",
       "items": {
-        "type": "string"
-      }
-    }
+        "type": "string",
+      },
+    },
   },
-  "$schema": "http://json-schema.org/draft-07/schema#"
-}
+  "$schema": "http://json-schema.org/draft-07/schema#",
+};

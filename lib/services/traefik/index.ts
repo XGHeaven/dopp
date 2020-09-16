@@ -2,7 +2,7 @@ import { ServiceContext, ServiceCreator } from "../service.ts";
 import { App } from "../../app.ts";
 import { Yargs, path } from "../../deps.ts";
 import { Templates } from "./template.ts";
-import { createAppSSSCommand } from '../../commands/app.ts'
+import { createAppSSSCommand } from "../../commands/app.ts";
 
 interface TraefikServiceOptions {
   entrypoints?: string[];
@@ -20,8 +20,11 @@ interface TraefikServiceConfig {
 export const command = "traefik";
 export const description = "Manage traefik service";
 
-export const create: ServiceCreator<TraefikServiceConfig, TraefikServiceOptions> = (ctx) => {
-  const { bedrock } = ctx
+export const create: ServiceCreator<
+  TraefikServiceConfig,
+  TraefikServiceOptions
+> = (ctx) => {
+  const { bedrock } = ctx;
 
   async function init() {
     if (await bedrock.appHub.hasApp("traefik")) {
@@ -50,7 +53,7 @@ export const create: ServiceCreator<TraefikServiceConfig, TraefikServiceOptions>
     process(app: App, options: TraefikServiceOptions): void {
       const labels: string[] = ["traefik.enable=true"];
       const id = app.id;
-      const esc = id.replaceAll('.', '_')
+      const esc = id.replaceAll(".", "_");
 
       // TODO: 根据配置自动获取网络信息
       labels.push(`traefik.docker.network=dopp`);
@@ -85,12 +88,15 @@ export const create: ServiceCreator<TraefikServiceConfig, TraefikServiceOptions>
     },
 
     command(yargs: Yargs.YargsType): Yargs.YargsType {
-      return ctx.registeProcessCommand(yargs.demandCommand().command(
-        "init",
-        "Init traefik service",
-        () => {},
-        () => init(),
-      ), 'traefik');
-    }
-  }
-}
+      return ctx.registeProcessCommand(
+        yargs.demandCommand().command(
+          "init",
+          "Init traefik service",
+          () => {},
+          () => init(),
+        ),
+        "traefik",
+      );
+    },
+  };
+};

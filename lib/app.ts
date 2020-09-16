@@ -120,7 +120,7 @@ export class App {
           return {
             type: "bridge",
             name: net,
-            aliases: []
+            aliases: [],
           };
         }
       } else {
@@ -181,8 +181,8 @@ export class App {
   readonly envDir: string;
   readonly labels: string[];
   readonly image: string;
-  readonly command?: string | string[]
-  readonly entrypoint?: string | string[]
+  readonly command?: string | string[];
+  readonly entrypoint?: string | string[];
 
   private envMap: Map<string, Record<string, string>> = new Map();
 
@@ -204,8 +204,8 @@ export class App {
     this.envDir = path.join(this.appDir, DIR_NAME_ENV);
     this.labels = rawConfig.labels ?? [];
     this.image = rawConfig.image ?? "";
-    this.command = rawConfig.command
-    this.entrypoint = rawConfig.entrypoint
+    this.command = rawConfig.command;
+    this.entrypoint = rawConfig.entrypoint;
   }
 
   toComposeJSON(): any {
@@ -243,18 +243,18 @@ export class App {
             return vol;
           }),
           networks: this.networks.length === 0
-            ? {[this.bedrock.defaultNetwork]: {aliases: [this.id]}}
+            ? { [this.bedrock.defaultNetwork]: { aliases: [this.id] } }
             : this.networks.reduce<Record<string, any>>((nets, net) => {
               nets[net.name] = {
-                aliases: net.aliases
-              }
-              return nets
+                aliases: net.aliases,
+              };
+              return nets;
             }, {}),
           environment: envMap,
           env_file: envFiles,
           labels: this.labels,
-          ...(this.command ? {command: this.command} : {}),
-          ...(this.entrypoint ? {entrypoint: this.entrypoint} : {})
+          ...(this.command ? { command: this.command } : {}),
+          ...(this.entrypoint ? { entrypoint: this.entrypoint } : {}),
         },
       },
       networks: this.networks.length === 0

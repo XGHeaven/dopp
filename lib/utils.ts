@@ -32,16 +32,20 @@ export async function runComposeCommand(
   }
 }
 
-export async function runDockerCommand(bedrock: DoppBedRock, cmds: string[], quiet: boolean = false) {
+export async function runDockerCommand(
+  bedrock: DoppBedRock,
+  cmds: string[],
+  quiet: boolean = false,
+) {
   const ret = await Deno.run({
-    cmd: ['docker', ...cmds],
+    cmd: ["docker", ...cmds],
     cwd: bedrock.root,
     stdin: quiet ? "null" : "inherit",
     stderr: quiet ? "null" : "inherit",
     stdout: quiet ? "null" : "inherit",
-  }).status()
+  }).status();
 
-  return ret
+  return ret;
 }
 
 export function generatePassword(length = 32) {

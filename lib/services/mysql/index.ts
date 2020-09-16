@@ -24,7 +24,7 @@ export const description = "Manage mysql db service";
 export function create(
   ctx: ServiceContext<MysqlServiceConfig>,
 ) {
-  const { bedrock } = ctx
+  const { bedrock } = ctx;
 
   async function newOrGetRootPassword() {
     const password = await ctx.getConfig("rootPassword");
@@ -203,43 +203,46 @@ DROP USER IF EXISTS '${db}';
     },
 
     command(yargs: Yargs.YargsType): Yargs.YargsType {
-      return ctx.registeProcessCommand(yargs.demandCommand().command(
-        "init",
-        "Init mysql app",
-        (_yargs: Yargs.YargsType) =>
-          _yargs.option("update", { type: "boolean", alias: ["u"] }),
-        ({ update }: any) => init(!!update),
-      ).command(
-        "create <db>",
-        "Create new database",
-        () => {},
-        ({ db }: any) => create(db),
-      )
-        .command(
-          "remove <db>",
-          "Remove database",
+      return ctx.registeProcessCommand(
+        yargs.demandCommand().command(
+          "init",
+          "Init mysql app",
           (_yargs: Yargs.YargsType) =>
-            _yargs.option("yes", { alias: "y", type: "boolean" }),
-          ({ db, yes }: any) => {
-            console.log(yes);
-            if (!yes) {
-              console.log(
-                "Delete is a dangerous action, please pass --yes or -y",
-              );
-              return;
-            }
-            remove(db);
-          },
-        )
-        .command(
-          "repl <db>",
-          "Run a mysql REPL",
+            _yargs.option("update", { type: "boolean", alias: ["u"] }),
+          ({ update }: any) => init(!!update),
+        ).command(
+          "create <db>",
+          "Create new database",
           () => {},
-          ({ db }: any) => repl(db),
+          ({ db }: any) => create(db),
         )
-        .command("list", "List all added db", () => {}, () => {
-          list();
-        }), 'mysql');
+          .command(
+            "remove <db>",
+            "Remove database",
+            (_yargs: Yargs.YargsType) =>
+              _yargs.option("yes", { alias: "y", type: "boolean" }),
+            ({ db, yes }: any) => {
+              console.log(yes);
+              if (!yes) {
+                console.log(
+                  "Delete is a dangerous action, please pass --yes or -y",
+                );
+                return;
+              }
+              remove(db);
+            },
+          )
+          .command(
+            "repl <db>",
+            "Run a mysql REPL",
+            () => {},
+            ({ db }: any) => repl(db),
+          )
+          .command("list", "List all added db", () => {}, () => {
+            list();
+          }),
+        "mysql",
+      );
     },
   };
 }

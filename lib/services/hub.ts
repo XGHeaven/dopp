@@ -4,12 +4,12 @@ import { Yargs, yargs } from "../deps.ts";
 
 import * as TraefikService from "./traefik/index.ts";
 import * as MysqlService from "./mysql/index.ts";
-import * as MongodbService from './mongo/index.ts'
+import * as MongodbService from "./mongo/index.ts";
 
 export const BUILTIN_SERVICES: Record<string, any> = {
   traefik: TraefikService,
   mysql: MysqlService,
-  mongodb: MongodbService
+  mongodb: MongodbService,
 };
 
 async function loadCtr(url: string) {

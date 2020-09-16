@@ -3,7 +3,7 @@ import { Yargs, path, fs } from "../deps.ts";
 import { DoppBedRock } from "../bedrock.ts";
 import { createAppSSSCommand } from "../commands/app.ts";
 
-export type ServiceCreator<C, O> = (context: ServiceContext<C>) => Service<O>
+export type ServiceCreator<C, O> = (context: ServiceContext<C>) => Service<O>;
 
 export interface Service<O> {
   process(app: App, options: O): void | Promise<void>;
@@ -45,6 +45,6 @@ export class ServiceContext<C extends Record<any, any>> {
   }
 
   registeProcessCommand(yargs: Yargs.YargsType, appid: string) {
-    return createAppSSSCommand(this.bedrock, yargs, appid)
+    return createAppSSSCommand(this.bedrock, yargs, appid);
   }
 }
