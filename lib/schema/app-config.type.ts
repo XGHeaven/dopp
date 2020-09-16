@@ -15,6 +15,8 @@ export interface AppConfig {
   extends?: string | string[];
   services?: AppService[];
   ports?: string[];
+  command?: string | string[]
+  entrypoint?: string | string[]
 }
 
 export enum AppEnvType {

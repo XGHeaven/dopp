@@ -1,6 +1,6 @@
 import { fs, path, Ajv } from "./deps.ts";
-import { Schema } from "./schema/app-config-schema.ts";
-import { DoppConfig } from "./schema/dopp-config.ts";
+import { Schema } from "./schema/app-config.schema.ts";
+import { DoppConfig } from "./schema/dopp-config.type.ts";
 import { ServiceHub } from "./services/hub.ts";
 import { AppHub } from "./app.ts";
 
