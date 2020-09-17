@@ -73,6 +73,16 @@ export class AppHub {
     );
     return await App.create(this.bedrock, appid, appConfig);
   }
+
+  async updateApp(appid: string, appConfig: AppConfig = {}): Promise<App | null> {
+    const app = await this.getApp(appid)
+
+    if (!app) {
+      return null
+    }
+
+    return app.cloneAndUpdate(appConfig)
+  }
 }
 
 export class App {
@@ -326,5 +336,20 @@ export class App {
       path.join(this.bedrock.appsDir, this.id, "docker-compose.yml"),
       new TextEncoder().encode(YAML.stringify(this.toComposeJSON())),
     );
+  }
+
+  /**
+   * 克隆之后，原有 app 对象就会失效，需要使用更新之后的对象，否则就会产生混乱
+   * @param config
+   */
+  async cloneAndUpdate(config: AppConfig): Promise<App> {
+    const newConfig = {
+      ...this.rawConfig,
+      ...config
+    }
+
+    await Deno.writeTextFile(path.join(this.appDir, 'app.yml'), YAML.stringify(newConfig))
+
+    return await App.create(this.bedrock, this.id, newConfig)
   }
 }

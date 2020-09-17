@@ -9,8 +9,11 @@ export interface MysqlServiceOptions {
   remap?: Record<string, string>;
 }
 
+type ImageType = 'mysql' | 'mariadb'
+
 export interface MysqlServiceConfig {
-  type: "mysql" | "mariadb";
+  type: ImageType;
+  version: string
   export: number | boolean;
   rootPassword: string;
   dbs: Record<string, {
@@ -25,6 +28,7 @@ export function create(
   ctx: ServiceContext<MysqlServiceConfig>,
 ) {
   const { bedrock } = ctx;
+  const appid = 'mysql'
 
   async function newOrGetRootPassword() {
     const password = await ctx.getConfig("rootPassword");
@@ -35,6 +39,16 @@ export function create(
     const npwd = generatePassword();
     await ctx.setConfig("rootPassword", npwd);
     return npwd;
+  }
+
+  async function getApp() {
+    const app = await bedrock.appHub.getApp(appid)
+    if (!app) {
+      console.error(`Please init mysql service`)
+      Deno.exit(1)
+    }
+
+    return app
   }
 
   async function init(update = false) {
@@ -171,6 +185,22 @@ DROP USER IF EXISTS '${db}';
     Object.keys(dbs).forEach((db) => console.log(db));
   }
 
+  async function changeType(newType: ImageType) {
+    const app = await getApp()
+    const oldType = await ctx.getConfig('type', 'mariadb')
+    if (oldType === newType) {
+      console.log(`Current type already is ${newType}`)
+    } else {
+      (await app.cloneAndUpdate({
+        image: newType
+      })).build()
+
+      await ctx.setConfig('type', newType)
+
+      console.log(`Change type to ${newType}, Please restart or start service`)
+    }
+  }
+
   return {
     async process(app: App, options: MysqlServiceOptions) {
       const dbs = await ctx.getConfig("dbs", {});
@@ -240,8 +270,12 @@ DROP USER IF EXISTS '${db}';
           )
           .command("list", "List all added db", () => {}, () => {
             list();
-          }),
-        "mysql",
+          })
+          .command('change-type <type>', 'Change service type', (_yargs: Yargs.YargsType) => _yargs.positional('type', {
+            type: 'string',
+            choices: ['mysql', 'mariadb']
+          }), ({type}: any) => changeType(type)),
+        appid,
       );
     },
   };
