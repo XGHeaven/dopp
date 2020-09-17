@@ -96,6 +96,15 @@ export function createAppSSSCommand(
       );
   }
 
+  async function getApp(appid: string) {
+    const app = await bedrock.appHub.getApp(appid)
+    if (!app) {
+      console.error(`Cannot found ${appid} app`)
+      Deno.exit(1)
+    }
+    return app
+  }
+
   return yargs.command(
     getCommand("start"),
     "Start app",
@@ -108,13 +117,20 @@ export function createAppSSSCommand(
           alias: ["b"],
           description: "Build app",
         },
-      ),
+      ).option('pull', {
+        type: 'boolean',
+        default: false,
+        alias: ['p'],
+        description: "Pull the latest image before started"
+      }),
     async (args: any) => {
       const appid = getAppid(args);
-      const app = await bedrock.appHub.getApp(appid);
-      if (!app) return;
+      const app = await getApp(appid);
       if (args.build) {
         await app.build();
+      }
+      if (args.pull) {
+        await runComposeCommand(app, ['pull'])
       }
       await runComposeCommand(app, ["up", "-d"]);
     },
