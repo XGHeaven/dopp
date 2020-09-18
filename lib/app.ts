@@ -74,14 +74,17 @@ export class AppHub {
     return await App.create(this.bedrock, appid, appConfig);
   }
 
-  async updateApp(appid: string, appConfig: AppConfig = {}): Promise<App | null> {
-    const app = await this.getApp(appid)
+  async updateApp(
+    appid: string,
+    appConfig: AppConfig = {},
+  ): Promise<App | null> {
+    const app = await this.getApp(appid);
 
     if (!app) {
-      return null
+      return null;
     }
 
-    return app.cloneAndUpdate(appConfig)
+    return app.cloneAndUpdate(appConfig);
   }
 }
 
@@ -345,11 +348,14 @@ export class App {
   async cloneAndUpdate(config: AppConfig): Promise<App> {
     const newConfig = {
       ...this.rawConfig,
-      ...config
-    }
+      ...config,
+    };
 
-    await Deno.writeTextFile(path.join(this.appDir, 'app.yml'), YAML.stringify(newConfig))
+    await Deno.writeTextFile(
+      path.join(this.appDir, "app.yml"),
+      YAML.stringify(newConfig),
+    );
 
-    return await App.create(this.bedrock, this.id, newConfig)
+    return await App.create(this.bedrock, this.id, newConfig);
   }
 }
