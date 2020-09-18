@@ -15,6 +15,7 @@ interface TraefikServiceOptions {
 }
 
 interface TraefikServiceConfig {
+  defaultTLS: boolean;
 }
 
 export const command = "traefik";
@@ -50,10 +51,11 @@ export const create: ServiceCreator<
   }
 
   return {
-    process(app: App, options: TraefikServiceOptions): void {
+    async process(app: App, options: TraefikServiceOptions) {
       const labels: string[] = ["traefik.enable=true"];
       const id = app.id;
       const esc = id.replaceAll(".", "_");
+      const defaultTLS = await ctx.getConfig("defaultTLS", false);
 
       // TODO: 根据配置自动获取网络信息
       labels.push(`traefik.docker.network=dopp`);
@@ -76,7 +78,7 @@ export const create: ServiceCreator<
         );
       }
 
-      if (options.tls) {
+      if (options.tls || (defaultTLS && options.tls !== false)) {
         if (options.type === "tcp") {
           labels.push(`traefik.tcp.routers.${esc}.tls=true`);
         } else if (options.type !== "udp") {
@@ -94,7 +96,13 @@ export const create: ServiceCreator<
           "Init traefik service",
           () => {},
           () => init(),
-        ),
+        ).command(ctx.getConfigCommand({
+          "default-tls": {
+            description: "Enable tls by default",
+            type: "boolean",
+            delegate: "defaultTLS",
+          },
+        })),
         "traefik",
       );
     },

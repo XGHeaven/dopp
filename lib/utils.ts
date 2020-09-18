@@ -53,3 +53,16 @@ export function generatePassword(length = 32) {
     Math.floor((Math.random() * 36)).toString(36)
   ).join("");
 }
+
+export function mapValues<T extends Record<string, V>, V, R>(
+  object: T,
+  mapper: (value: V, key: string) => R,
+): Record<string, R> {
+  return Object.entries(object).reduce<Record<string, any>>(
+    (newObject, [key, value]) => {
+      newObject[key] = mapper(value, key);
+      return newObject;
+    },
+    {},
+  );
+}
