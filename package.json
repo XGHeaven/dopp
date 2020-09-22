@@ -14,7 +14,8 @@
     "bin": "DOPP_ROOT=./.dopp deno run --unstable -A --importmap import_map.json ./lib/dopp.ts",
     "schema": "node --experimental-modules ./scripts/generate-schema.mjs",
     "template": "deno run --unstable -A ./scripts/generate-template.ts",
-    "fmt": "deno fmt lib"
+    "fmt": "deno fmt lib",
+    "test": "deno test --unstable -A lib --config tsconfig.json"
   },
   "author": "XGHeaven <xgheaven@gmail.com>",
   "license": "MIT",

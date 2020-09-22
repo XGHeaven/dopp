@@ -17,6 +17,8 @@ export interface AppConfig {
   ports?: string[];
   command?: string | string[];
   entrypoint?: string | string[];
+  _compose_service?: Record<any, any>;
+  _compose?: Record<any, any>;
 }
 
 export enum AppEnvType {

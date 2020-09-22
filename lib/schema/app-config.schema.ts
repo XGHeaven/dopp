@@ -109,6 +109,12 @@ export const Schema = {
         },
       ],
     },
+    "_compose_service": {
+      "$ref": "#/definitions/Record<any,any>",
+    },
+    "_compose": {
+      "$ref": "#/definitions/Record<any,any>",
+    },
   },
   "definitions": {
     "AppEnvFile": {
@@ -195,6 +201,10 @@ export const Schema = {
           "type": "string",
         },
       },
+    },
+    "Record<any,any>": {
+      "description": "Construct a type with a set of properties K of type T",
+      "type": "object",
     },
   },
   "$schema": "http://json-schema.org/draft-07/schema#",

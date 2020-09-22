@@ -240,9 +240,11 @@ export class App {
     }
 
     return {
+      ...this.rawConfig._compose,
       version: "3",
       services: {
         default: {
+          ...this.rawConfig._compose_service,
           image: this.image,
           hostname: this.id,
           ports: this.ports,
