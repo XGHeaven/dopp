@@ -1,4 +1,4 @@
-import { Yargs } from "../deps.ts";
+import { Yargs, path } from "../deps.ts";
 import { DoppBedRock } from "../bedrock.ts";
 import { runComposeCommand } from "../utils.ts";
 
@@ -65,6 +65,26 @@ export default function (bedrock: DoppBedRock) {
             const app = await bedrock.appHub.getApp(appid);
             if (!app) return;
             await runComposeCommand(app, ["rm"]);
+          },
+        )
+        .command(
+          "edit <appid>",
+          "Edit app.yml",
+          () => {},
+          async ({ appid }: any) => {
+            const app = await bedrock.appHub.getApp(appid);
+            if (!app) return;
+            const ret = await Deno.run({
+              cmd: ["vim", path.join(app.appDir, "app.yml")],
+              cwd: app.appDir,
+              stdin: "inherit",
+              stdout: "inherit",
+              stderr: "inherit",
+            }).status();
+
+            if (!ret.success) {
+              console.log("Cannot edit " + appid + " app");
+            }
           },
         ),
     handler: () => {},
