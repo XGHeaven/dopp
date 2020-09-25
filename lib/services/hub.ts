@@ -5,11 +5,13 @@ import { Yargs, yargs } from "../deps.ts";
 import * as TraefikService from "./traefik/index.ts";
 import * as MysqlService from "./mysql/index.ts";
 import * as MongodbService from "./mongo/index.ts";
+import * as EnvService from './env/index.ts'
 
 export const BUILTIN_SERVICES: Record<string, any> = {
   traefik: TraefikService,
   mysql: MysqlService,
   mongodb: MongodbService,
+  env: EnvService
 };
 
 async function loadCtr(url: string) {
@@ -47,7 +49,8 @@ interface ServiceLoader {
 
 export class ServiceHub {
   static async create(bedrock: DoppBedRock) {
-    const services = bedrock.services;
+    // env 是默认启动的
+    const services = ['env'].concat(bedrock.services);
     const serviceLoaders: Record<string, ServiceLoader> = {};
 
     const results = await Promise.all(
