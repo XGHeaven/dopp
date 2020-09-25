@@ -32,7 +32,6 @@ export class ServiceContext<C extends Record<any, any>> {
   constructor(public readonly bedrock: DoppBedRock, private name: string) {
     this.storeDir = path.join(this.bedrock.serviceDir, name);
     this.#configPath = path.join(this.storeDir, "config.json");
-    fs.ensureDirSync(this.storeDir);
   }
 
   getConfig<K extends keyof C>(key: K, defaultValue: C[K]): Promise<C[K]>;
@@ -163,6 +162,7 @@ export class ServiceContext<C extends Record<any, any>> {
   }
 
   private async saveConfig() {
+    await fs.ensureDir(this.storeDir)
     await fs.writeJson(this.#configPath, this.#config);
   }
 }
