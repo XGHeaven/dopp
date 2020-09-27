@@ -223,7 +223,7 @@ export const create: ServiceCreator<MongoServiceConfig, MongoServiceOptions> = (
               }).option("database", {
                 type: "string",
                 alias: ["d"],
-                description: "Connection database, default to <conn>",
+                description: "Connection database, defaults to <conn>",
               }),
             ({ conn, username, password, database }: any) =>
               createConnn(conn, { username, password, database }),

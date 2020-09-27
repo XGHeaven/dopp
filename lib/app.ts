@@ -182,7 +182,9 @@ export class App {
         // TODO: print
         continue;
       }
-      await service.process(app, options);
+      if (service.process) {
+        await service.process(app, options);
+      }
     }
 
     return app;
@@ -268,7 +270,7 @@ export class App {
           environment: envMap,
           env_file: envFiles,
           labels: this.labels,
-          restart: 'unless-stopped',
+          restart: "unless-stopped",
           ...(this.command ? { command: this.command } : {}),
           ...(this.entrypoint ? { entrypoint: this.entrypoint } : {}),
         },
@@ -288,8 +290,19 @@ export class App {
     return path.join(this.volumeDir, name);
   }
 
-  createEnv(name: string, pairs: Record<string, string>) {
-    this.envMap.set(name, pairs);
+  createEnv(name: string, pairs: Record<string, string> | string[]) {
+    if (Array.isArray(pairs)) {
+      this.envMap.set(
+        name,
+        pairs.reduce<Record<string, string>>((map, pair) => {
+          const [key, value] = pair.split("=");
+          map[key.trim()] = value.trim();
+          return map;
+        }, {}),
+      );
+    } else {
+      this.envMap.set(name, pairs);
+    }
   }
 
   appendEnv(env: string | AppEnv) {

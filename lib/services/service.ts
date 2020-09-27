@@ -7,7 +7,7 @@ import { mapValues } from "../utils.ts";
 export type ServiceCreator<C, O> = (context: ServiceContext<C>) => Service<O>;
 
 export interface Service<O> {
-  process(app: App, options: O): void | Promise<void>;
+  process?(app: App, options: O): void | Promise<void>;
 
   validate?(options: O): boolean;
 
@@ -162,7 +162,7 @@ export class ServiceContext<C extends Record<any, any>> {
   }
 
   private async saveConfig() {
-    await fs.ensureDir(this.storeDir)
+    await fs.ensureDir(this.storeDir);
     await fs.writeJson(this.#configPath, this.#config);
   }
 }
