@@ -26,6 +26,25 @@ export const Schema = {
         ],
       },
     },
+    "envs": {
+      "type": "array",
+      "items": {
+        "anyOf": [
+          {
+            "$ref": "#/definitions/AppEnvFile",
+          },
+          {
+            "$ref": "#/definitions/AppEnvPair",
+          },
+          {
+            "$ref": "#/definitions/AppEnvPrivate",
+          },
+          {
+            "type": "string",
+          },
+        ],
+      },
+    },
     "volumes": {
       "type": "array",
       "items": {

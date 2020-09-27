@@ -8,7 +8,11 @@ export interface AppVolume {
 export interface AppConfig {
   name?: string;
   image?: string;
+  /**
+   * @deprecated prefer use envs
+   */
   env?: (string | AppEnv)[];
+  envs?: (string | AppEnv)[];
   volumes?: (string | AppVolume)[];
   networks?: (string | AppNetwork)[];
   labels?: string[];

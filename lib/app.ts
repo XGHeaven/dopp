@@ -42,6 +42,10 @@ export class AppHub {
 
     const valid = this.#validate(appConfig);
 
+    if (appConfig.env) {
+      console.warn('Deprecated: env is not recommanded, please use envs instaed.')
+    }
+
     if (!valid) {
       const [err] = this.#validate.errors!;
       throw new Error(`${err.dataPath} ${err.message}`);
@@ -119,7 +123,7 @@ export class App {
     id: string,
     rawConfig: AppConfig,
   ): Promise<App> {
-    const env = (rawConfig.env ?? []).map<AppEnv>(App.parseEnv);
+    const env = (rawConfig.envs ?? rawConfig.env ?? []).map<AppEnv>(App.parseEnv);
 
     const networks = (rawConfig.networks ?? []).map<AppNetwork>((net) => {
       if (typeof net === "string") {
