@@ -2,7 +2,7 @@ import { yargs, path, Yargs } from "./deps.ts";
 import { DoppBedRock } from "./bedrock.ts";
 
 import appCmd from "./commands/app.ts";
-import initCmd from './commands/init.ts'
+import initCmd from "./commands/init.ts";
 
 let root: string = "";
 

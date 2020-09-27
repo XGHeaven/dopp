@@ -220,9 +220,7 @@ GRANT ALL PRIVILEGES ON DATABASE ${database} TO ${username};
       if (options.useURL) {
         envs.push(
           `${
-            typeof options.useURL === "string"
-              ? options.useURL
-              : "DATABASE_URL"
+            typeof options.useURL === "string" ? options.useURL : "DATABASE_URL"
           }=postgresql://${info.username}:${info.password}@${appid}:5432/${info.database}`,
         );
       } else if (options.custom) {

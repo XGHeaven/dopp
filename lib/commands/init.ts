@@ -8,7 +8,7 @@ export default function (bedrock: DoppBedRock) {
     builder: (yargs: Yargs.YargsType) => yargs,
     handler: async () => {
       // TODO: 网络、文件夹
-      console.log('Need to implement')
+      console.log("Need to implement");
     },
   };
 }
