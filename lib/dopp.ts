@@ -2,6 +2,7 @@ import { yargs, path, Yargs } from "./deps.ts";
 import { DoppBedRock } from "./bedrock.ts";
 
 import appCmd from "./commands/app.ts";
+import initCmd from './commands/init.ts'
 
 let root: string = "";
 
@@ -28,6 +29,7 @@ let yargsInstance = yargs()
   .scriptName("dopp")
   .alias("h", "help")
   .demandCommand()
+  .command(initCmd(bedrock))
   .command(appCmd(bedrock))
   .command("info", "Print infomation of dopp", () => {}, () => {
     console.log(JSON.stringify(bedrock, null, 2));
