@@ -2,6 +2,7 @@ export interface AppVolume {
   source: string;
   target: string;
   type: string;
+  readonly: boolean;
 }
 
 // 配置定义
@@ -21,6 +22,7 @@ export interface AppConfig {
   ports?: string[];
   command?: string | string[];
   entrypoint?: string | string[];
+  bindHostTimezone?: boolean;
   _compose_service?: Record<any, any>;
   _compose?: Record<any, any>;
 }

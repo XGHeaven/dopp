@@ -9,6 +9,7 @@ const defaultConfig: Required<DoppConfig> = {
   defaultNetwork: "dopp",
   dockerEndpoint: "unix:///var/run/docker.sock",
   services: [],
+  bindHostTimezone: true,
 };
 
 // Dopp 基岩

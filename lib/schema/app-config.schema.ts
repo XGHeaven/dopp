@@ -128,6 +128,12 @@ export const Schema = {
         },
       ],
     },
+    "timezone": {
+      "type": [
+        "string",
+        "boolean",
+      ],
+    },
     "_compose_service": {
       "$ref": "#/definitions/Record<any,any>",
     },

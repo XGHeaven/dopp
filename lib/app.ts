@@ -43,7 +43,9 @@ export class AppHub {
     const valid = this.#validate(appConfig);
 
     if (appConfig.env) {
-      console.warn('Deprecated: env is not recommanded, please use envs instaed.')
+      console.warn(
+        "Deprecated: env is not recommanded, please use envs instaed.",
+      );
     }
 
     if (!valid) {
@@ -123,8 +125,11 @@ export class App {
     id: string,
     rawConfig: AppConfig,
   ): Promise<App> {
-    const env = (rawConfig.envs ?? rawConfig.env ?? []).map<AppEnv>(App.parseEnv);
+    const env = (rawConfig.envs ?? rawConfig.env ?? []).map<AppEnv>(
+      App.parseEnv,
+    );
     const defaultNetwork = await bedrock.getConfig("defaultNetwork");
+    const defaultBindHostTimezone = await bedrock.getConfig("bindHostTimezone");
 
     const networks = (rawConfig.networks ?? ["@"]).map<AppNetwork>((net) => {
       if (typeof net === "string") {
@@ -148,25 +153,37 @@ export class App {
 
     const volumes = (rawConfig.volumes ?? []).map<AppVolume>((volume) => {
       if (typeof volume === "string") {
-        const [source, target] = volume.split(":");
+        const [source, target, modifier] = volume.split(":");
         if (!source || source.startsWith("@")) {
           const name = source.slice(1);
           return {
             type: AppVolumeType.Private,
             source: name || "default",
             target,
+            readonly: modifier === "ro",
           };
         } else if (source.startsWith(".") || source.startsWith("/")) {
+          if (!target && !modifier) {
+            // 缩写
+            return {
+              type: AppVolumeType.Bind,
+              source,
+              target: source,
+              readonly: false,
+            };
+          }
           return {
             type: AppVolumeType.Bind,
             source,
             target,
+            readonly: modifier === "ro",
           };
         } else {
           return {
             type: AppVolumeType.Volume,
             source,
             target,
+            readonly: false,
           };
         }
       } else {
@@ -174,7 +191,15 @@ export class App {
       }
     });
 
-    let app = new App(bedrock, id, rawConfig, env, networks, volumes);
+    let app = new App(
+      bedrock,
+      id,
+      rawConfig,
+      env,
+      networks,
+      volumes,
+      rawConfig.bindHostTimezone ?? defaultBindHostTimezone,
+    );
 
     await app.loadEnvMap();
 
@@ -217,6 +242,7 @@ export class App {
     public readonly env: AppEnv[],
     public readonly networks: AppNetwork[],
     public readonly volumes: AppVolume[],
+    public readonly bindHostTimezone: boolean,
   ) {
     this.name = rawConfig.name ?? "unknown";
     this.appDir = path.join(bedrock.appsDir, id);
@@ -255,15 +281,27 @@ export class App {
           image: this.image,
           hostname: this.id,
           ports: this.ports,
-          volumes: this.volumes.map((vol) => {
-            if (vol.type === AppVolumeType.Private) {
-              return `./volumes/${vol.source}:${vol.target}`;
-            }
-            if (vol.type === AppVolumeType.Bind) {
-              return `${vol.source}:${vol.target}`;
-            }
-            return vol;
-          }),
+          volumes: [
+            ...this.volumes.map((vol) => {
+              if (vol.type === AppVolumeType.Private) {
+                return `./volumes/${vol.source}:${vol.target}${
+                  vol.readonly ? ":ro" : ""
+                }`;
+              }
+              if (vol.type === AppVolumeType.Bind) {
+                return `${vol.source}:${vol.target}${
+                  vol.readonly ? ":ro" : ""
+                }`;
+              }
+              return vol;
+            }),
+            ...(this.bindHostTimezone
+              ? [
+                "/etc/localtime:/etc/localtime:ro",
+                "/etc/timezone:/etc/timezone:ro",
+              ]
+              : []),
+          ],
           networks: this.networks.reduce<Record<string, any>>((nets, net) => {
             nets[net.name] = {
               aliases: net.aliases,
