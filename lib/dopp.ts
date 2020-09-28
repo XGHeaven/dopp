@@ -3,6 +3,7 @@ import { DoppBedRock } from "./bedrock.ts";
 
 import appCmd from "./commands/app.ts";
 import initCmd from "./commands/init.ts";
+import serviceCmd from "./commands/service.ts";
 
 let root: string = "";
 
@@ -31,6 +32,7 @@ let yargsInstance = yargs()
   .demandCommand()
   .command(initCmd(bedrock))
   .command(appCmd(bedrock))
+  .command(serviceCmd(bedrock))
   .command("info", "Print infomation of dopp", () => {}, () => {
     console.log(JSON.stringify(bedrock, null, 2));
   });

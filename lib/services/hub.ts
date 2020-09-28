@@ -16,6 +16,8 @@ export const BUILTIN_SERVICES: Record<string, any> = {
   postgres: PostgresService,
 };
 
+export const BUILTIN_SERVICE_FORCE_ENABLED: string[] = ["env"];
+
 async function loadCtr(url: string) {
   if (BUILTIN_SERVICES[url]) {
     return BUILTIN_SERVICES[url];
@@ -52,7 +54,10 @@ interface ServiceLoader {
 export class ServiceHub {
   static async create(bedrock: DoppBedRock) {
     // env 是默认启动的
-    const services = ["env"].concat(await bedrock.getConfig("services"));
+    const services = [
+      ...BUILTIN_SERVICE_FORCE_ENABLED,
+      ...await bedrock.getConfig("services"),
+    ];
     const serviceLoaders: Record<string, ServiceLoader> = {};
 
     const results = await Promise.all(
