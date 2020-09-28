@@ -194,7 +194,7 @@ export const create: ServiceCreator<MongoServiceConfig, MongoServiceOptions> = (
 
       app.appendEnv(`@mongodb-${conn}`);
 
-      app.createEnv(`mongo-${conn}`, {
+      app.createEnv(`mongodb-${conn}`, {
         MONGO_HOST: appid,
         MONGO_PORT: "27017",
         MONGO_USERNAME: config.username,
