@@ -3,6 +3,7 @@ import { Yargs, path, fs } from "../deps.ts";
 import { DoppBedRock } from "../bedrock.ts";
 import { createAppSSSCommand } from "../commands/app.ts";
 import { mapValues } from "../utils.ts";
+import { ConfigController } from "../config.ts";
 
 export type ServiceCreator<C, O> = (context: ServiceContext<C>) => Service<O>;
 
@@ -25,42 +26,19 @@ interface ConfigSchema {
 
 export class ServiceContext<C extends Record<any, any>> {
   // service storage directory
-  storeDir: string;
-  #config!: C;
-  #configPath: string;
+  storeDir: string = path.join(this.bedrock.serviceDir, this.name);
+
+  #controller: ConfigController<C> = new ConfigController(
+    this.storeDir,
+    "config",
+  );
 
   constructor(public readonly bedrock: DoppBedRock, private name: string) {
-    this.storeDir = path.join(this.bedrock.serviceDir, name);
-    this.#configPath = path.join(this.storeDir, "config.json");
   }
 
-  getConfig<K extends keyof C>(key: K, defaultValue: C[K]): Promise<C[K]>;
-  getConfig<K extends keyof C>(key: K): Promise<C[K] | undefined>;
-  async getConfig<K extends keyof C>(
-    key: K,
-    defaultValue?: C[K],
-  ): Promise<C[K] | undefined> {
-    if (!this.#config) {
-      await this.initConfig();
-    }
-    return this.#config[key] ?? defaultValue;
-  }
-
-  async setConfig<K extends keyof C>(key: K, value: C[K]): Promise<void> {
-    if (!this.#config) {
-      await this.initConfig();
-    }
-    this.#config[key] = value;
-    await this.saveConfig();
-  }
-
-  async delConfig<K extends keyof C>(key: K): Promise<void> {
-    if (!this.#config) {
-      await this.initConfig();
-    }
-    delete this.#config[key];
-    await this.saveConfig();
-  }
+  getConfig = this.#controller.get.bind(this.#controller);
+  setConfig = this.#controller.set.bind(this.#controller);
+  delConfig = this.#controller.del.bind(this.#controller);
 
   registeProcessCommand(yargs: Yargs.YargsType, appid: string) {
     return createAppSSSCommand(this.bedrock, yargs, appid);
@@ -153,16 +131,5 @@ export class ServiceContext<C extends Record<any, any>> {
             },
           ),
     };
-  }
-
-  private async initConfig() {
-    this.#config = (await fs.exists(this.#configPath))
-      ? ((await fs.readJson(this.#configPath)) as C)
-      : ({} as C);
-  }
-
-  private async saveConfig() {
-    await fs.ensureDir(this.storeDir);
-    await fs.writeJson(this.#configPath, this.#config);
   }
 }

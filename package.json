@@ -15,7 +15,8 @@
     "schema": "node --experimental-modules ./scripts/generate-schema.mjs",
     "template": "deno run --unstable -A ./scripts/generate-template.ts",
     "fmt": "deno fmt lib",
-    "test": "deno test --unstable -A lib --config tsconfig.json"
+    "test": "deno test --unstable -A --config tsconfig.json lib",
+    "test:one": "deno test --unstable -A --config tsconfig.json"
   },
   "author": "XGHeaven <xgheaven@gmail.com>",
   "license": "MIT",

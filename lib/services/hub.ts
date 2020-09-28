@@ -52,7 +52,7 @@ interface ServiceLoader {
 export class ServiceHub {
   static async create(bedrock: DoppBedRock) {
     // env 是默认启动的
-    const services = ["env"].concat(bedrock.services);
+    const services = ["env"].concat(await bedrock.getConfig("services"));
     const serviceLoaders: Record<string, ServiceLoader> = {};
 
     const results = await Promise.all(

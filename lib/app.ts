@@ -124,13 +124,14 @@ export class App {
     rawConfig: AppConfig,
   ): Promise<App> {
     const env = (rawConfig.envs ?? rawConfig.env ?? []).map<AppEnv>(App.parseEnv);
+    const defaultNetwork = await bedrock.getConfig("defaultNetwork");
 
-    const networks = (rawConfig.networks ?? []).map<AppNetwork>((net) => {
+    const networks = (rawConfig.networks ?? ["@"]).map<AppNetwork>((net) => {
       if (typeof net === "string") {
         if (net === "@") {
           return {
             type: "bridge",
-            name: bedrock.defaultNetwork,
+            name: defaultNetwork,
             aliases: [id],
           };
         } else {
@@ -263,14 +264,12 @@ export class App {
             }
             return vol;
           }),
-          networks: this.networks.length === 0
-            ? { [this.bedrock.defaultNetwork]: { aliases: [this.id] } }
-            : this.networks.reduce<Record<string, any>>((nets, net) => {
-              nets[net.name] = {
-                aliases: net.aliases,
-              };
-              return nets;
-            }, {}),
+          networks: this.networks.reduce<Record<string, any>>((nets, net) => {
+            nets[net.name] = {
+              aliases: net.aliases,
+            };
+            return nets;
+          }, {}),
           environment: envMap,
           env_file: envFiles,
           labels: this.labels,

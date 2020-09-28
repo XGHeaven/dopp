@@ -3,19 +3,24 @@ import { Schema } from "./schema/app-config.schema.ts";
 import { DoppConfig } from "./schema/dopp-config.type.ts";
 import { ServiceHub } from "./services/hub.ts";
 import { AppHub } from "./app.ts";
+import { ConfigController } from "./config.ts";
+
+const defaultConfig: Required<DoppConfig> = {
+  defaultNetwork: "dopp",
+  dockerEndpoint: "unix:///var/run/docker.sock",
+  services: [],
+};
 
 // Dopp 基岩
-export class DoppBedRock implements Required<DoppConfig> {
+export class DoppBedRock {
   #serviceHub!: ServiceHub;
   #appHub!: AppHub;
 
-  readonly appsDir: string;
-  readonly serviceDir: string;
+  readonly appsDir: string = path.join(this.root, "apps");
+  readonly serviceDir: string = path.join(this.root, "services");
+  readonly configPath: string = path.join(this.root, "config.json");
 
-  readonly defaultNetwork: string = "dopp";
-  readonly dockerEndpoint: string = "unix:///var/run/docker.sock";
-  readonly services: string[] = [];
-  readonly configPath: string;
+  #config = new ConfigController<DoppConfig>(this.root, "config", Schema);
 
   get serviceHub() {
     return this.#serviceHub;
@@ -26,18 +31,21 @@ export class DoppBedRock implements Required<DoppConfig> {
   }
 
   constructor(public readonly root: string) {
-    this.appsDir = path.join(this.root, "apps");
-    this.serviceDir = path.join(this.root, "services");
-    this.configPath = path.join(this.root, "config.json");
-
     const config = fs.existsSync(this.configPath)
       ? fs.readJsonSync(this.configPath)
       : {};
 
-    new Ajv().validate(Schema, config);
-
     Object.assign(this, config);
   }
+
+  async getConfig<K extends keyof DoppConfig>(
+    key: K,
+  ): Promise<Required<DoppConfig>[K]> {
+    return this.#config.get(key, defaultConfig[key]) as any;
+  }
+
+  setConfig = this.#config.set.bind(this.#config);
+  delConfig = this.#config.del.bind(this.#config);
 
   async prepare() {
     this.#serviceHub = await ServiceHub.create(this);
