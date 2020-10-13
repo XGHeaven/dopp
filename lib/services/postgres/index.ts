@@ -2,26 +2,15 @@ import { App } from "../../app.ts";
 import { DoppBedRock } from "../../bedrock.ts";
 import { Yargs } from "../../deps.ts";
 import { generatePassword, runComposeCommand } from "../../utils.ts";
+import { ConnectionManage, ConnInfo } from "../common/connection-manage.ts";
 import { Service, ServiceContext } from "../service.ts";
 
 export const command = "postgres";
 export const description = "Manage postgres";
 
-interface RootInfo {
-  username: string;
-  password: string;
-  database: string;
-}
-
-interface Connection {
-  username: string;
-  password: string;
-  database: string;
-}
-
 interface PostgresServiceConfig {
-  root: RootInfo;
-  conns: Record<string, Connection>;
+  root: ConnInfo;
+  conns: Record<string, ConnInfo>;
 }
 
 interface PostgresServiceOptions {
@@ -37,6 +26,64 @@ export function create(
 ): Service<PostgresServiceOptions> {
   const { bedrock } = ctx;
   const appid = "postgres";
+  const connection = new ConnectionManage(ctx, appid, {
+    onCreate: async ({ username, password, database }, root) => {
+      const app = await getApp();
+      const CREATE_DATABASE_SQL = `
+CREATE DATABASE ${database};
+      `.trim();
+
+      await runComposeCommand(
+        app,
+        [
+          "exec",
+          "default",
+          "psql",
+          "-U",
+          root.username,
+          "-c",
+          CREATE_DATABASE_SQL,
+        ],
+        false,
+      );
+
+      const SQL = `
+CREATE USER "${username}" WITH PASSWORD '${password}';
+GRANT ALL PRIVILEGES ON DATABASE ${database} TO ${username};
+      `.trim();
+      await runComposeCommand(
+        app,
+        ["exec", "default", "psql", "-U", root.username, "-c", SQL],
+        false,
+      );
+    },
+    onRemove: async () => {
+      // TODO
+    },
+    onREPL: async ({ username, password, database }, isRoot) => {
+      const app = await getApp();
+      if (isRoot) {
+        await runComposeCommand(app, [
+          "exec",
+          "default",
+          "psql",
+          "-U",
+          username,
+        ]);
+      } else {
+        await runComposeCommand(app, [
+          "exec",
+          "default",
+          "psql",
+          "-U",
+          username,
+          "-W",
+          password,
+          database,
+        ]);
+      }
+    },
+  });
 
   async function newOrGetRootInfo() {
     const info = await ctx.getConfig("root");
@@ -45,7 +92,7 @@ export function create(
       return info;
     }
 
-    const newInfo: RootInfo = {
+    const newInfo: ConnInfo = {
       username: "postgres",
       password: generatePassword(),
       database: "postgres",
@@ -77,7 +124,7 @@ export function create(
       image: "postgres:13",
       ports: ["5432:5432"],
       volumes: ["@:/var/lib/postgresql/data"],
-      env: ["@root"],
+      envs: ["@root"],
     });
 
     app.createEnv("root", {
@@ -87,109 +134,6 @@ export function create(
     });
 
     await app.build();
-  }
-
-  async function repl(conn?: string) {
-    const app = await getApp();
-    const root = await ctx.getConfig("root");
-
-    if (!root) {
-      console.log("Please init first");
-      Deno.exit(1);
-    }
-
-    if (!conn) {
-      await runComposeCommand(
-        app,
-        ["exec", "default", "psql", "-U", root.username],
-      );
-    } else {
-      const conns = await ctx.getConfig("conns", {});
-      const info = conns[conn];
-      if (!info) {
-        console.log(`Cannot get ${conn} connection`);
-        Deno.exit(0);
-      }
-
-      await runComposeCommand(
-        app,
-        [
-          "exec",
-          "default",
-          "psql",
-          "-U",
-          info.username,
-          "-W",
-          info.password,
-          info.database,
-        ],
-      );
-    }
-
-    runComposeCommand(app, ["exec"], false);
-  }
-
-  async function create(
-    conn: string,
-    options: Partial<Connection> & { noCreate?: boolean },
-  ) {
-    const app = await getApp();
-    const root = await ctx.getConfig("root");
-    const conns = await ctx.getConfig("conns", {});
-
-    if (!root) {
-      console.log("Root is undefined");
-      Deno.exit(1);
-    }
-
-    if (conns[conn]) {
-      console.log(
-        `${conn} has been added, if you want to overwrite it, please special --force`,
-      );
-      Deno.exit(1);
-    }
-
-    const username = options.username ?? conn;
-    const password = options.password ?? generatePassword();
-    const database = options.database ?? conn;
-
-    if (!options.noCreate) {
-      const CREATE_DATABASE_SQL = `
-CREATE DATABASE ${database};
-      `.trim();
-
-      await runComposeCommand(
-        app,
-        [
-          "exec",
-          "default",
-          "psql",
-          "-U",
-          root.username,
-          "-c",
-          CREATE_DATABASE_SQL,
-        ],
-        false,
-      );
-
-      const SQL = `
-CREATE USER "${username}" WITH PASSWORD '${password}';
-GRANT ALL PRIVILEGES ON DATABASE ${database} TO ${username};
-      `.trim();
-      await runComposeCommand(
-        app,
-        ["exec", "default", "psql", "-U", root.username, "-c", SQL],
-        false,
-      );
-    }
-
-    conns[conn] = {
-      username,
-      password,
-      database,
-    };
-
-    await ctx.setConfig("conns", conns);
   }
 
   return {
@@ -238,8 +182,8 @@ GRANT ALL PRIVILEGES ON DATABASE ${database} TO ${username};
       } else {
         const prefix = options.prefix ?? "POSTGRES";
         envs.push(
-          ...Object.entries(variable).map(([key, value]) =>
-            `${prefix}_${key}=${value}`
+          ...Object.entries(variable).map(
+            ([key, value]) => `${prefix}_${key}=${value}`,
           ),
         );
       }
@@ -255,35 +199,20 @@ GRANT ALL PRIVILEGES ON DATABASE ${database} TO ${username};
     },
     command(yargs: Yargs.YargsType) {
       return ctx.registeProcessCommand(
-        yargs.demandCommand().command(
-          "init",
-          "Init postgres instance",
-          () => {},
-          () => init(),
-        ).command(
-          "create <conn>",
-          "Create a connection",
-          (_yargs: Yargs.YargsType) =>
-            _yargs.option("no-create", {
-              description: `Do not create user/database`,
-              type: "boolean",
-            }).option("username", {
-              type: "string",
-              alias: ["u"],
-              description: "Connection username, defaults to <conn>",
-            }).option("password", {
-              type: "string",
-              alias: ["p"],
-              description: "Connection password, defaults to random generated",
-            }).option("database", {
-              type: "string",
-              alias: ["d"],
-              description: "Connection database, defaults to <conn>",
-            }),
-          ({ conn, noCreate }: any) => {
-            create(conn, { noCreate });
-          },
-        ).command("repl [conn]", "REPL cli", ({ conn }: any) => repl(conn)),
+        yargs
+          .demandCommand()
+          .command(
+            "init",
+            "Init postgres instance",
+            () => {},
+            () => init(),
+          )
+          .command(
+            connection.buildCreateCommand(),
+          )
+          .command(connection.buildRemoveCommand())
+          .command(connection.buildREPLCommand())
+          .command(connection.buildListCommand()),
         appid,
       );
     },

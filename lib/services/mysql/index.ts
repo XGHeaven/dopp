@@ -2,9 +2,10 @@ import { ServiceContext } from "../service.ts";
 import { App } from "../../app.ts";
 import { Yargs } from "../../deps.ts";
 import { runComposeCommand, generatePassword } from "../../utils.ts";
+import { ConnectionManage, ConnInfo } from "../common/connection-manage.ts";
 
 export interface MysqlServiceOptions {
-  db: string;
+  conn: string;
   prefix?: string;
   remap?: Record<string, string>;
 }
@@ -15,10 +16,8 @@ export interface MysqlServiceConfig {
   type: ImageType;
   version: string;
   export: number | boolean;
-  rootPassword: string;
-  dbs: Record<string, {
-    password: string;
-  }>;
+  conns: Record<string, ConnInfo>;
+  root: ConnInfo;
 }
 
 export const command = "mysql";
@@ -29,16 +28,73 @@ export function create(
 ) {
   const { bedrock } = ctx;
   const appid = "mysql";
+  const connection = new ConnectionManage(ctx, appid, {
+    async onCreate(info, root) {
+      const app = await getApp();
+      const { database, username, password } = info;
+      // TODO: 添加 NOT EXIST
+      const SQL = `
+      CREATE USER '${username}' IDENTIFIED BY '${password}';
+      CREATE DATABASE ${database};
+      GRANT ALL ON ${database}.* TO '${username}';
+      `.trim();
 
-  async function newOrGetRootPassword() {
-    const password = await ctx.getConfig("rootPassword");
-    if (password) {
-      return password;
+      await runComposeCommand(
+        app,
+        [
+          "exec",
+          "default",
+          "mysql",
+          "-u",
+          root.username,
+          "-p" + root.password,
+          "-e",
+          SQL,
+        ],
+      );
+    },
+    async onRemove({ database, username }, root) {
+      const app = await getApp();
+
+      const SQL = `
+DROP DATABASE IF EXISTS ${database};
+DROP USER IF EXISTS '${username}';
+    `;
+
+      await runComposeCommand(
+        app!,
+        ["exec", "default", "mysql", "-p" + root.password, "-e", SQL],
+      );
+    },
+    async onREPL(info, isRoot) {
+      const app = await getApp();
+      const { database, password, username } = info;
+      await runComposeCommand(app, [
+        "exec",
+        "default",
+        "mysql",
+        database,
+        "-u",
+        username,
+        "-p" + password,
+      ], false);
+    },
+  });
+
+  async function newOrGetRoot() {
+    const root = await ctx.getConfig("root");
+    if (root) {
+      return root;
     }
 
-    const npwd = generatePassword();
-    await ctx.setConfig("rootPassword", npwd);
-    return npwd;
+    const nRoot: ConnInfo = {
+      username: "root",
+      password: generatePassword(),
+      database: "",
+    };
+
+    await ctx.setConfig("root", nRoot);
+    return nRoot;
   }
 
   async function getApp() {
@@ -68,121 +124,16 @@ export function create(
         ? ["3306:3306"]
         : [],
       volumes: ["@:/var/lib/mysql"],
-      env: ["@root-password"],
+      envs: ["@root"],
     }, update);
 
-    app.createEnv("root-password", {
-      MYSQL_ROOT_PASSWORD: await newOrGetRootPassword(),
+    const root = await newOrGetRoot();
+
+    app.createEnv("root", {
+      MYSQL_ROOT_PASSWORD: root.password,
     });
 
     await app.build();
-  }
-
-  async function create(db: string) {
-    // TODO: make sure mysql service is running
-
-    const app = await bedrock.appHub.getApp("mysql");
-    const dbs = await ctx.getConfig("dbs", {});
-    const rootPassword = await ctx.getConfig("rootPassword", "");
-
-    if (!app) {
-      throw new Error("Please init mysql service first");
-    }
-
-    if (dbs[db]) {
-      throw new Error(`${db} database has been created`);
-    }
-
-    const password = generatePassword();
-
-    const SQL = `
-CREATE USER '${db}' IDENTIFIED BY '${password}';
-CREATE DATABASE ${db};
-GRANT ALL ON ${db}.* TO '${db}';
-    `.trim();
-
-    await runComposeCommand(
-      app,
-      ["exec", "default", "mysql", "-p" + rootPassword, "-e", SQL],
-      true,
-    );
-
-    dbs[db] = {
-      password,
-    };
-
-    await ctx.setConfig("dbs", dbs);
-  }
-
-  async function remove(db: string) {
-    const app = await bedrock.appHub.getApp("mysql");
-    const dbs = await ctx.getConfig("dbs", {});
-    const rootPassword = await ctx.getConfig("rootPassword", "");
-    const copys = { ...dbs };
-    delete copys[db];
-
-    const SQL = `
-DROP DATABASE IF EXISTS ${db};
-DROP USER IF EXISTS '${db}';
-    `;
-
-    await runComposeCommand(
-      app!,
-      ["exec", "default", "mysql", "-p" + rootPassword, "-e", SQL],
-    );
-
-    await ctx.setConfig("dbs", copys);
-  }
-
-  async function repl(db: string) {
-    const app = await bedrock.appHub.getApp("mysql");
-    let ret: Deno.ProcessStatus;
-    if (db === "root") {
-      const rootPassword = await ctx.getConfig("rootPassword", "");
-      ret = await Deno.run({
-        cmd: [
-          "docker-compose",
-          "exec",
-          "default",
-          "mysql",
-          "-u",
-          "root",
-          "-p" + rootPassword,
-        ],
-        cwd: app?.appDir,
-        stdin: "inherit",
-        stdout: "inherit",
-        stderr: "inherit",
-      }).status();
-    } else {
-      const dbs = await ctx.getConfig("dbs", {});
-      ret = await Deno.run({
-        cmd: [
-          "docker-compose",
-          "exec",
-          "default",
-          "mysql",
-          db,
-          "-u",
-          db,
-          "-p" + dbs[db].password,
-        ],
-        cwd: app?.appDir,
-        stdin: "inherit",
-        stdout: "inherit",
-        stderr: "inherit",
-      }).status();
-    }
-
-    if (!ret.success) {
-      Deno.exit(ret.code);
-    }
-  }
-
-  async function list() {
-    const dbs = await ctx.getConfig("dbs", {});
-
-    Object.keys(dbs).forEach((db) => console.log(db));
   }
 
   async function changeType(newType: ImageType) {
@@ -203,15 +154,15 @@ DROP USER IF EXISTS '${db}';
 
   return {
     async process(app: App, options: MysqlServiceOptions) {
-      const dbs = await ctx.getConfig("dbs", {});
-      const db = options.db;
+      const conns = await ctx.getConfig("conns", {});
+      const conn = options.conn;
 
-      if (!db || !dbs[db]) {
+      if (!conn || !conns[conn]) {
         throw new Error("Must be choose db");
       }
 
-      const dbConfig = dbs[db];
-      const envName = `service-mysql-${db}`;
+      const dbConfig = conns[conn];
+      const envName = `service-mysql-${conn}`;
       let env: Record<string, string>;
 
       if (options.remap) {
@@ -221,9 +172,9 @@ DROP USER IF EXISTS '${db}';
         env = {
           [`${prefix}_HOST`]: "mysql",
           [`${prefix}_PORT`]: "3306",
-          [`${prefix}_USER`]: db,
+          [`${prefix}_USER`]: conn,
           [`${prefix}_PASSWORD`]: dbConfig.password,
-          [`${prefix}_DATABASE`]: db,
+          [`${prefix}_DATABASE`]: conn,
         };
       }
 
@@ -240,37 +191,10 @@ DROP USER IF EXISTS '${db}';
           (_yargs: Yargs.YargsType) =>
             _yargs.option("update", { type: "boolean", alias: ["u"] }),
           ({ update }: any) => init(!!update),
-        ).command(
-          "create <db>",
-          "Create new database",
-          () => {},
-          ({ db }: any) => create(db),
-        )
-          .command(
-            "remove <db>",
-            "Remove database",
-            (_yargs: Yargs.YargsType) =>
-              _yargs.option("yes", { alias: "y", type: "boolean" }),
-            ({ db, yes }: any) => {
-              console.log(yes);
-              if (!yes) {
-                console.log(
-                  "Delete is a dangerous action, please pass --yes or -y",
-                );
-                return;
-              }
-              remove(db);
-            },
-          )
-          .command(
-            "repl <db>",
-            "Run a mysql REPL",
-            () => {},
-            ({ db }: any) => repl(db),
-          )
-          .command("list", "List all added db", () => {}, () => {
-            list();
-          })
+        ).command(connection.buildCreateCommand())
+          .command(connection.buildRemoveCommand())
+          .command(connection.buildREPLCommand())
+          .command(connection.buildListCommand())
           .command(
             "change-type <type>",
             "Change service type",
