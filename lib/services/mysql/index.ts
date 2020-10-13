@@ -3,11 +3,14 @@ import { App } from "../../app.ts";
 import { Yargs } from "../../deps.ts";
 import { runComposeCommand, generatePassword } from "../../utils.ts";
 import { ConnectionManage, ConnInfo } from "../common/connection-manage.ts";
+import { normalizeEnvList, processInlineEnv } from "../common/env-extract.ts";
 
 export interface MysqlServiceOptions {
   conn: string;
   prefix?: string;
-  remap?: Record<string, string>;
+  custom?: Record<string, string>;
+  inline?: boolean;
+  useURL?: boolean | string;
 }
 
 type ImageType = "mysql" | "mariadb";
@@ -161,26 +164,23 @@ DROP USER IF EXISTS '${username}';
         throw new Error("Must be choose db");
       }
 
-      const dbConfig = conns[conn];
+      const info = conns[conn];
       const envName = `service-mysql-${conn}`;
-      let env: Record<string, string>;
 
-      if (options.remap) {
-        env = {};
-      } else {
-        const prefix = options.prefix ?? "MYSQL";
-        env = {
-          [`${prefix}_HOST`]: "mysql",
-          [`${prefix}_PORT`]: "3306",
-          [`${prefix}_USER`]: conn,
-          [`${prefix}_PASSWORD`]: dbConfig.password,
-          [`${prefix}_DATABASE`]: conn,
-        };
-      }
+      const envs: string[] = normalizeEnvList(
+        {
+          HOST: appid,
+          PORT: "3306",
+          USER: info.username,
+          PASSWORD: info.password,
+          DATABASE: info.database,
+        },
+        `mysql://${info.username}:${info.password}@${info.database}/${info.database}`,
+        "MYSQL",
+        options,
+      );
 
-      app.createEnv(envName, env);
-
-      app.appendEnv(`@${envName}`);
+      processInlineEnv(envName, app, !!options.inline, envs);
     },
 
     command(yargs: Yargs.YargsType): Yargs.YargsType {

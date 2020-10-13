@@ -66,3 +66,10 @@ export function mapValues<T extends Record<string, V>, V, R>(
     {},
   );
 }
+
+export function renderEnvTemplate(template: string, value: any) {
+  return new Function(
+    `{${Object.keys(value).join(",")}}`,
+    `return \`${template}\``,
+  )(value);
+}

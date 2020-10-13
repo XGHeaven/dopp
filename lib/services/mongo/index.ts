@@ -3,6 +3,11 @@ import { Yargs } from "../../deps.ts";
 import { generatePassword, runComposeCommand } from "../../utils.ts";
 import { App } from "../../app.ts";
 import { ConnectionManage, ConnInfo } from "../common/connection-manage.ts";
+import {
+  normalizeEnvList,
+  NormalizeEnvOptions,
+  processInlineEnv,
+} from "../common/env-extract.ts";
 
 export const command = "mongodb";
 export const description = "Manage mongodb service";
@@ -14,8 +19,9 @@ export interface MongoServiceConfig {
   conns: Record<string, ConnInfo>;
 }
 
-export interface MongoServiceOptions {
+export interface MongoServiceOptions extends NormalizeEnvOptions {
   conn: string;
+  inline: boolean;
 }
 
 export const create: ServiceCreator<MongoServiceConfig, MongoServiceOptions> = (
@@ -131,27 +137,32 @@ export const create: ServiceCreator<MongoServiceConfig, MongoServiceOptions> = (
   }
 
   return {
-    async process(app, option) {
-      const { conn } = option;
+    async process(app, options) {
+      const { conn } = options;
       if (!conn) {
         throw new Error("conn is required");
       }
       const conns = await ctx.getConfig("conns", {});
-      const config = conns[conn];
+      const info = conns[conn];
 
       if (!conn) {
         throw new Error(`${conn} is not exist`);
       }
 
-      app.appendEnv(`@mongodb-${conn}`);
+      const envs = normalizeEnvList(
+        {
+          HOST: appid,
+          PORT: "27017",
+          USERNAME: info.username,
+          PASSWORD: info.password,
+          DATABASE: info.database,
+        },
+        `mongodb://${info.username}:${info.password}@${appid}/${info.database}`,
+        "MONGO",
+        options,
+      );
 
-      app.createEnv(`mongodb-${conn}`, {
-        MONGO_HOST: appid,
-        MONGO_PORT: "27017",
-        MONGO_USERNAME: config.username,
-        MONGO_PASSWORD: config.password,
-        MONGO_DATABASE: config.database,
-      });
+      processInlineEnv(`mongodb-${conn}`, app, !!options.inline, envs);
     },
     command(yargs: Yargs.YargsType) {
       return ctx.registeProcessCommand(

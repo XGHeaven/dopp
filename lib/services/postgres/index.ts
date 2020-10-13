@@ -1,8 +1,13 @@
 import { App } from "../../app.ts";
 import { DoppBedRock } from "../../bedrock.ts";
 import { Yargs } from "../../deps.ts";
-import { generatePassword, runComposeCommand } from "../../utils.ts";
+import {
+  generatePassword,
+  renderEnvTemplate,
+  runComposeCommand,
+} from "../../utils.ts";
 import { ConnectionManage, ConnInfo } from "../common/connection-manage.ts";
+import { normalizeEnvList, processInlineEnv } from "../common/env-extract.ts";
 import { Service, ServiceContext } from "../service.ts";
 
 export const command = "postgres";
@@ -151,51 +156,20 @@ GRANT ALL PRIVILEGES ON DATABASE ${database} TO ${username};
         return;
       }
 
-      const envs: string[] = [];
+      const envs: string[] = normalizeEnvList(
+        {
+          HOST: appid,
+          PORT: "5432",
+          USERNAME: info.username,
+          PASSWORD: info.password,
+          DATABASE: info.database,
+        },
+        `postgresql://${info.username}:${info.password}@${appid}:5432/${info.database}`,
+        "POSTGRES",
+        options,
+      );
 
-      const variable = {
-        HOST: appid,
-        PORT: "5432",
-        USERNAME: info.username,
-        PASSWORD: info.password,
-        DATABASE: info.database,
-      };
-
-      if (options.useURL) {
-        envs.push(
-          `${
-            typeof options.useURL === "string" ? options.useURL : "DATABASE_URL"
-          }=postgresql://${info.username}:${info.password}@${appid}:5432/${info.database}`,
-        );
-      } else if (options.custom) {
-        envs.push(
-          ...Object.entries(options.custom).map(([key, value]) =>
-            [
-              key,
-              new Function(
-                "{HOST, PORT, USERNAME, PASSWORD, DATABASE}",
-                `return \`${value}\``,
-              )(variable),
-            ].join("=")
-          ),
-        );
-      } else {
-        const prefix = options.prefix ?? "POSTGRES";
-        envs.push(
-          ...Object.entries(variable).map(
-            ([key, value]) => `${prefix}_${key}=${value}`,
-          ),
-        );
-      }
-
-      if (options.inline) {
-        for (const env of envs) {
-          app.appendEnv(env);
-        }
-      } else {
-        app.createEnv(`postgres-service-${conn}`, envs);
-        app.appendEnv(`@postgres-service-${conn}`);
-      }
+      processInlineEnv(`postgres-service-${conn}`, app, !!options.inline, envs);
     },
     command(yargs: Yargs.YargsType) {
       return ctx.registeProcessCommand(
