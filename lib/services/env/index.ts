@@ -1,4 +1,5 @@
 import { Yargs } from "../../deps.ts";
+import { processInlineEnv } from "../common/env-extract.ts";
 import { Service, ServiceContext } from "../service.ts";
 
 interface EnvServiceConfig {
@@ -92,14 +93,12 @@ export function create(
           continue;
         }
 
-        if (inline) {
-          for (const [key, value] of Object.entries(env)) {
-            app.appendEnv(`${key}=${value}`);
-          }
-        } else {
-          app.createEnv(`env-service-${name}`, env);
-          app.appendEnv(`@env-service-${name}`);
-        }
+        processInlineEnv(
+          `env-service-${name}`,
+          app,
+          inline,
+          Object.entries(env).map(([key, value]) => `${key}=${value}`),
+        );
       }
     },
     command(yargs: Yargs.YargsType) {
